@@ -39,10 +39,14 @@ this, bind it to specific code, and can a third party verify both?" — a
 question detection cannot answer but a signature can.
 
 Full format specification: [`packages/zkpoc-ccm/SPEC.md`](../packages/zkpoc-ccm/SPEC.md).
-Reference implementation: [`packages/zkpoc-ccm/`](../packages/zkpoc-ccm/) (28
-tests), consumed by a reference resource governor
-([`packages/zkpoc-worker/`](../packages/zkpoc-worker/)) that refuses to run
-anything the manifest didn't verify.
+Reference implementation: [`@zkpoc/ccm`](https://www.npmjs.com/package/@zkpoc/ccm)
+(28 tests, zero runtime dependencies), consumed by a reference resource
+governor ([`@zkpoc/worker`](https://www.npmjs.com/package/@zkpoc/worker))
+that refuses to run anything the manifest didn't verify. Both are published
+and installable today; a [live demo](https://devgurav.github.io/zkpoc/demo/)
+issues a manifest, verifies it, runs a governed workload under the declared
+ceiling, and lets you tamper with the manifest to watch verification catch
+it.
 
 ## Goals
 
@@ -243,10 +247,20 @@ the maintainer rather than through this repo.
 
 ## Status
 
-**Experimental, project-local — not filed with W3C or WICG.** `zkpoc-ccm/1`
-is explicitly marked unstable in its own spec and expected to change as the
-governor and verification layers mature. This explainer exists to make the
-proposal legible to a standards audience *before* that filing, matching the
+**Experimental — not filed with W3C or WICG.** `zkpoc-ccm/1` is explicitly
+marked unstable in its own spec and expected to change as the governor and
+verification layers mature. This explainer exists to make the proposal
+legible to a standards audience *before* that filing, matching the
 sequencing the project's original plan laid out (measured result → demo →
 packages → explainer → targeted outreach) — not to claim standards-track
 status this project does not have.
+
+The implementation half of that sequence is done: the demo is hosted and
+the packages are published. What has **not** happened is the part that
+would actually justify a standards filing — adoption by anyone other than
+this project, or expressed interest from a browser vendor. A v1 that
+deliberately requires no browser-engine change (see
+[Alternatives](#alternatives-considered)) is a userland format first and an
+incubation candidate second; filing it before either of those exists would
+be asking a standards body to incubate something with no demonstrated
+constituency. The honest next step is adoption, not paperwork.
