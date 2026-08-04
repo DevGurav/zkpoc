@@ -1,0 +1,17 @@
+{
+  "name": "@zkpoc/challenge",
+  "version": "0.1.0",
+  "description": "Client-side solver for the useful-PoW anti-bot challenge protocol -- a drop-in replacement for hashcash-style widgets",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": ["index.js", "src/"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["anti-bot", "proof-of-work", "captcha-alternative", "verifiable-compute"],
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
