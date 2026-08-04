@@ -434,7 +434,7 @@ docs/roadmap.md                milestone status, source of truth
 docs/testing-strategy.md       coverage map and testing conventions
 docs/device-tiers.md           tier provenance + what measurement changed
 docs/dual-use-evaluation.md    M4: detector baselines environment-blocked, the real defense
-CHANGELOG.md, CONTRIBUTING.md, SECURITY.md
+CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, LICENSE-MIT, LICENSE-APACHE
 ```
 
 ## Notes on rigour
@@ -448,4 +448,5 @@ and an audit rate derived from economics rather than anomaly detection.
 
 ## License
 
-MIT OR Apache-2.0.
+Dual-licensed under either [MIT](LICENSE-MIT) or [Apache License, Version 2.0](LICENSE-APACHE),
+at your option.

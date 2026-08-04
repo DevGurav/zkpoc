@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Circom + snarkjs + Hardhat toolchain for M3 Track 1 (ADR-0007) -- deliberately isolated from the rest of the monorepo",
+  "license": "MIT OR Apache-2.0",
   "scripts": {
     "build": "node scripts/build.js",
     "test": "hardhat test"
