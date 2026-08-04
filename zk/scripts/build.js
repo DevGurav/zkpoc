@@ -25,6 +25,28 @@
  * "simplify" this back to compiling circuits/ in place without re-verifying
  * the quirk is gone.
  *
+ * THE SAME QUIRK, ONE LEVEL DEEPER: THE `-l` INCLUDE PATH
+ * -------------------------------------------------------------
+ * Passing `-l <absolute path to zk/node_modules>` worked in every local run
+ * on Windows, then failed on Linux CI with "circomlib/circuits/bitify.circom
+ * ... has not been found" -- confirmed NOT a missing-dependency problem (a
+ * clean `npm install` reliably produces `zk/node_modules/circomlib` on both
+ * platforms). circom2's CLI wrapper relativizes every non-flag argument,
+ * including `-l`'s value, against cwd (see cli.js's `args.map`), and its
+ * WASI sandbox only grants read access via `preopens` built by walking cwd's
+ * ANCESTORS (`.`, `..`, `../..`, ...) -- see cli.js's `preopensFull()`. From
+ * the flattened `build/circuit/` directory, `zk/node_modules` is two levels
+ * up (`../../node_modules`), which depends on that ancestor-walking working
+ * identically across platforms -- exactly the kind of relative-path
+ * resolution that already proved unreliable once (the `-o` bug above). It
+ * held on Windows and broke on Linux.
+ *
+ * The fix is the same idea as the `-o` fix, applied one level deeper: copy
+ * `circomlib` INTO the flattened build directory too, so `-l` only ever
+ * needs to name a direct child of cwd (the `.` preopen, always registered
+ * first, unconditionally) -- no ancestor traversal anywhere in the
+ * invocation at all.
+ *
  * CIRCOM2's CHILD PROCESS DOES NOT RELIABLY EXIT
  * -----------------------------------------------
  * Separately: circom2's CLI prints its own "Everything went okay" success
@@ -113,16 +135,31 @@ function runCircom2(args, cwd, timeoutMs = 60000) {
   });
 }
 
+/** Recursive copy with no dependency beyond fs -- Node 18+ supports
+ * fs.cpSync natively, no need for a manual walk. */
+function copyDir(src, dest) {
+  fs.cpSync(src, dest, { recursive: true });
+}
+
 async function compileCircuit() {
   log(`compiling ${CIRCUIT_NAME}.circom (circom2, WASM -- see module docstring)`);
   fs.mkdirSync(CIRCUIT_DIR, { recursive: true });
   const localSrc = path.join(CIRCUIT_DIR, `${CIRCUIT_NAME}.circom`);
   fs.copyFileSync(CIRCUIT_SRC, localSrc);   // the flatten workaround
 
+  // circomlib copied alongside the circuit too -- see the module docstring
+  // ("THE SAME QUIRK, ONE LEVEL DEEPER") for why -l can't just point at
+  // zk/node_modules two directories up.
+  const localNodeModules = path.join(CIRCUIT_DIR, "node_modules");
+  fs.mkdirSync(localNodeModules, { recursive: true });
+  copyDir(
+    path.join(ROOT, "node_modules", "circomlib"),
+    path.join(localNodeModules, "circomlib"),
+  );
+
   const circom2Cli = path.join(ROOT, "node_modules", "circom2", "cli.js");
-  const libPath = path.join(ROOT, "node_modules");
   await runCircom2(
-    [circom2Cli, `${CIRCUIT_NAME}.circom`, "--r1cs", "--wasm", "--sym", "-o", ".", "-l", libPath],
+    [circom2Cli, `${CIRCUIT_NAME}.circom`, "--r1cs", "--wasm", "--sym", "-o", ".", "-l", "node_modules"],
     CIRCUIT_DIR
   );
 
