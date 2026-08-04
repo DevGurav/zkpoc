@@ -219,10 +219,6 @@ way, alongside the manifest-verification path.
   regardless; [docs/dual-use-evaluation.md](dual-use-evaluation.md)
   demonstrates the manifest/code-binding path as the real, already-tested
   defense. [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md).
-- `docs/outreach.md` — pitch material for Cloudflare, Friendly Captcha,
-  ALTCHA, mCaptcha, Anubis (bot-deterrence angle), Brave, Mozilla/WICG
-  (consent/governance angle), grounded in this project's actual measured
-  results rather than the original plan's projected ones.
 - `.nojekyll` + a root `index.html` redirect to `/demo/`, in place for a
   future GitHub Pages deploy.
 
@@ -236,8 +232,8 @@ way, alongside the manifest-verification path.
 - **Neither package is published to npm.** Both are built and tested;
   `npm publish` needs the maintainer's own npm credentials and is a
   one-way action.
-- **`docs/outreach.md`'s pitches have not been sent to anyone.** Sending
-  them is a business-development action, not a software one.
+- **Outreach is handled privately by the maintainer**, not tracked in this
+  repo — a business-development action, not a software one.
 
 ---
 

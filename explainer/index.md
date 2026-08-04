@@ -238,9 +238,8 @@ failed rather than showing an opaque pass/fail — see the check table in
 ## Stakeholder feedback
 
 None solicited yet from browser vendors or standards bodies. This document
-is the artifact that would accompany initial outreach — see
-[`docs/outreach.md`](../docs/outreach.md) for the drafted (not sent) pitch
-material and target list.
+is the artifact that would accompany initial outreach, handled privately by
+the maintainer rather than through this repo.
 
 ## Status
 

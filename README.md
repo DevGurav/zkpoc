@@ -373,13 +373,13 @@ demonstrates the actual defense: the manifest/code-binding verification
 path, already built, already tested.
 [ADR-0015](docs/adr/0015-dual-use-detectors-environment-blocked.md).
 
-**Stated plainly, three things in the original M4 scope were deliberately
-not done:** the demo isn't hosted (still local-only via
-`python -m http.server`; `.nojekyll` and a root redirect are staged for a
-future GitHub Pages deploy), neither package is published to npm, and
-[`docs/outreach.md`](docs/outreach.md)'s drafted pitch material hasn't been
-sent to anyone. All three are one-way, externally-visible actions outside
-what this project automates on its own.
+**Stated plainly, two things in the original M4 scope were deliberately not
+done:** the demo isn't hosted (still local-only via `python -m http.server`;
+`.nojekyll` and a root redirect are staged for a future GitHub Pages
+deploy), and neither package is published to npm. Both are one-way,
+externally-visible actions outside what this project automates on its own.
+Outreach itself is handled privately by the maintainer, not tracked in this
+repo.
 
 ## Documentation
 
@@ -397,7 +397,6 @@ answer and the measurement that caught it, which is the part worth keeping.
 | [zk/README.md](zk/README.md) | M3 Track 1 toolchain: build/test instructions, toy-ceremony caveat, tooling bugs worked around |
 | [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
 | [docs/dual-use-evaluation.md](docs/dual-use-evaluation.md) | M4: why the detector baselines are environment-blocked, and what stands in their place |
-| [docs/outreach.md](docs/outreach.md) | M4: drafted (not sent) pitch material, per target |
 | [explainer/index.md](explainer/index.md) | W3C/WICG-format Compute Consent Manifest explainer |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped, what broke, what got corrected — by milestone |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add a device measurement |
@@ -435,7 +434,6 @@ docs/roadmap.md                milestone status, source of truth
 docs/testing-strategy.md       coverage map and testing conventions
 docs/device-tiers.md           tier provenance + what measurement changed
 docs/dual-use-evaluation.md    M4: detector baselines environment-blocked, the real defense
-docs/outreach.md               M4: drafted (not sent) pitch material
 CHANGELOG.md, CONTRIBUTING.md, SECURITY.md
 ```
 

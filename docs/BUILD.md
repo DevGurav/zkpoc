@@ -382,10 +382,9 @@ below stays open rather than answered with a guess.
   verification path is demonstrated as the real, already-built, already-tested
   defense in their place. See [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md),
   [docs/dual-use-evaluation.md](dual-use-evaluation.md).
-- **Outreach material — drafted, not sent.** [`docs/outreach.md`](outreach.md)
-  has target-specific pitch content grounded in this project's actual
-  measurements. Sending it is a business-development action outside this
-  project's automation, deliberately left to the maintainer.
+- **Outreach — handled privately by the maintainer.** A business-development
+  action outside this project's automation, and deliberately not tracked in
+  this repo.
 - **Hosted one-click demo — not deployed.** `.nojekyll` and a root
   redirect to `/demo/` are in place for a future GitHub Pages deploy
   (`Settings → Pages → Deploy from branch → main → / (root)`), but nothing

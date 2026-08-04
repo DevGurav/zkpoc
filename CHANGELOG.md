@@ -71,9 +71,6 @@ publish, and outreach sending deliberately not attempted — see
   Demonstrates the manifest/code-binding verification path
   ([ADR-0002](docs/adr/0002-legitimacy-by-declaration-not-detection.md))
   as the real defense in their place.
-- `docs/outreach.md`: drafted (not sent) pitch material for Cloudflare,
-  Friendly Captcha, ALTCHA, mCaptcha, Anubis, Brave, and Mozilla/WICG,
-  grounded in this project's actual measured results.
 - `.nojekyll`, root `index.html` redirect to `/demo/`: local prep for a
   future GitHub Pages deploy, not pushed or enabled.
 
@@ -81,7 +78,7 @@ publish, and outreach sending deliberately not attempted — see
 
 - Demo not hosted (`demo/index.html` still local-only).
 - Neither package published to npm (needs the maintainer's own credentials).
-- `docs/outreach.md`'s pitches not sent to anyone.
+- Outreach handled privately by the maintainer, not tracked in this repo.
 
 ## [M3] — 2026-08-04 — ZK layer: Track 1 (Circom/Groth16) done, Track 2 blocked
 
