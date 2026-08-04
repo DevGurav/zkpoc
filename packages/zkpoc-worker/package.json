@@ -1,0 +1,19 @@
+{
+  "name": "@zkpoc/worker",
+  "version": "0.1.0",
+  "description": "Resource governor and sandboxed shard worker for consented browser compute",
+  "type": "module",
+  "main": "src/governor.js",
+  "exports": {
+    ".": "./src/governor.js",
+    "./worker": "./src/worker.js",
+    "./kernels": "./src/kernels.js"
+  },
+  "files": ["src/"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["webgpu", "web-worker", "resource-governor", "consent"],
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
