@@ -9,7 +9,7 @@
     "./canonical": "./src/canonical.js",
     "./schema": "./src/schema.js"
   },
-  "files": ["index.js", "src/", "SPEC.md"],
+  "files": ["index.js", "src/", "SPEC.md", "LICENSE-MIT", "LICENSE-APACHE"],
   "scripts": {
     "test": "node --test test/*.test.js"
   },
@@ -18,5 +18,13 @@
     "verifiable-compute", "web-monetization"
   ],
   "license": "MIT OR Apache-2.0",
+  "author": "DevGurav",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevGurav/zkpoc.git",
+    "directory": "packages/zkpoc-ccm"
+  },
+  "bugs": "https://github.com/DevGurav/zkpoc/issues",
+  "homepage": "https://github.com/DevGurav/zkpoc/tree/main/packages/zkpoc-ccm#readme",
   "engines": { "node": ">=18" }
 }

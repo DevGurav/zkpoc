@@ -9,11 +9,19 @@
     "./worker": "./src/worker.js",
     "./kernels": "./src/kernels.js"
   },
-  "files": ["src/"],
+  "files": ["src/", "API.md", "LICENSE-MIT", "LICENSE-APACHE"],
   "scripts": {
     "test": "node --test test/*.test.js"
   },
   "keywords": ["webgpu", "web-worker", "resource-governor", "consent"],
   "license": "MIT OR Apache-2.0",
+  "author": "DevGurav",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevGurav/zkpoc.git",
+    "directory": "packages/zkpoc-worker"
+  },
+  "bugs": "https://github.com/DevGurav/zkpoc/issues",
+  "homepage": "https://github.com/DevGurav/zkpoc/tree/main/packages/zkpoc-worker#readme",
   "engines": { "node": ">=18" }
 }

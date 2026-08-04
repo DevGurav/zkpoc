@@ -15,11 +15,19 @@
     "./ledger": "./src/ledger.js",
     "./challenge": "./src/challenge.js"
   },
-  "files": ["index.js", "src/"],
+  "files": ["index.js", "src/", "LICENSE-MIT", "LICENSE-APACHE"],
   "scripts": {
     "test": "node --test test/*.test.js"
   },
   "keywords": ["broker", "verifiable-compute", "proof-of-useful-work", "webgpu"],
   "license": "MIT OR Apache-2.0",
+  "author": "DevGurav",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevGurav/zkpoc.git",
+    "directory": "packages/zkpoc-broker"
+  },
+  "bugs": "https://github.com/DevGurav/zkpoc/issues",
+  "homepage": "https://github.com/DevGurav/zkpoc/tree/main/packages/zkpoc-broker#readme",
   "engines": { "node": ">=18" }
 }
