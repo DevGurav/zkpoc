@@ -10,7 +10,7 @@ right and the README needs updating.
 | --- | --- | --- |
 | M0 — Economic model + device benchmark | **Done** | Yes — see below |
 | M1 — Worker, governor, Compute Consent Manifest | **Done** | Yes — see below |
-| M2 — Broker, tiered verification, useful-PoW challenge protocol | **Not started** | — |
+| M2 — Broker, tiered verification, useful-PoW challenge protocol | **Done** | Yes — all 5, see below |
 | M3 — ZK layer (in-browser Groth16 + settlement-side zkVM) | **Not started** (plan recorded — [ADR-0007](adr/0007-tiered-zk-proving-plan.md)) | — |
 | M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Not started** | — |
 
@@ -92,13 +92,68 @@ measurement with a worse quick-sweep one on every re-run.
 
 ## M2 — Broker, tiered verification, useful-PoW challenge protocol
 
-**Not started.** Planned scope: turn a single governed worker into a
-verifiable multi-client system, and build the flagship deployable artifact —
-useful work substituted into an anti-bot proof-of-work slot. Design contract
-recorded in [BUILD.md §4](BUILD.md#m2--broker-tiered-verification-useful-pow-challenge-protocol)
-ahead of implementation, including the primary named risk (ML shard work may
-widen the attacker/honest-user cost gap vs. a memory-hard puzzle — tracked as
-Q1 in BUILD.md §5).
+**Done — all 5 exit criteria met.** Full build-order table, design contract,
+and per-phase delivery notes in
+[BUILD.md §4](BUILD.md#m2--broker-tiered-verification-useful-pow-challenge-protocol);
+this section is a milestone-level summary of it.
+
+**Delivered** (`packages/zkpoc-broker/`, 161 tests):
+
+- **Shard model + tier-aware sizing** (`src/shard.js`, `src/tiers.js`) —
+  deterministic-but-fresh inputs bound to a session nonce; device-tier
+  sizing from the measured M0 constants that refuses to guess for an
+  unmeasured tier (`UnmeasuredTierError`) rather than silently substituting
+  a placeholder.
+- **Commit-then-challenge result verification** (`src/merkle.js`,
+  `src/shard.js`) — replaced an initial point-sample scheme found to accept
+  zero-work submissions; a worker now Merkle-commits every row, and the
+  challenge is derived from *that root*, so producing a valid one costs the
+  real computation. [ADR-0011](adr/0011-commit-then-challenge-row-verification.md).
+- **Shard queue** (`src/queue.js`) — lease-based assignment, replica
+  independence enforced even across expired leases, abandonment after
+  exhausted retries.
+- **Redundancy consensus** (`src/consensus.js`) — a per-submission gate plus
+  majority/dispute tally. A tie is a dispute, not an arbitrary pick.
+- **Audit sampler + credit ledger** (`src/audit.js`, `src/ledger.js`) — the
+  stake-derived audit rate (a\* = 1/(1+k), [ADR-0006](adr/0006-audit-rate-from-inspection-game.md))
+  is real code, backed by a ledger that posts stake, pays confirmed work, and
+  slashes violations. A disputed shard forces a full-disclosure audit
+  (every row, not the k-row sample) regardless of stake —
+  `test/dispute-resolution.test.js` demonstrates dispute → forced audit →
+  the dishonest replica loses its stake, the honest one gets paid.
+- **Challenge protocol wrapper** (`src/challenge.js`) — issue/resolve for
+  anti-bot proof-of-work, deliberately *not* built on the barter pipeline
+  above: an anonymous visitor has no time to wait for a second replica, no
+  identity, and no stake. [ADR-0012](adr/0012-challenge-mode-single-submission-gate.md).
+- **Attacker-advantage-ratio measurement** (`bench/attacker_advantage.py`)
+  — the finding M2's design contract named as its primary risk before any
+  code existed is confirmed: this project's own measured GEMM kernel gives
+  an attacker a 181.7× GPU/CPU throughput advantage, 41×–271× worse than a
+  literature-cited memory-hard control (two independent published sources,
+  a decade apart). Reported directly, not softened —
+  [ADR-0013](adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
+  A mitigation is named (mix a memory-hard KDF into the row commitment) but
+  not yet designed or built — tracked as Q7 in BUILD.md §5.
+- **Adversarial harness** (`test/adversarial.test.js`) — closes the
+  remaining two exit criteria together: 24 distinct simulated clients across
+  8 shards, garbage and replay caught at exactly 100% (deterministic gate
+  failures), partial cheating checked empirically against the theoretical
+  f^k bound, Sybil identities shown to *raise* their own audit exposure by
+  splitting stake rather than lower it, and shards under selective
+  non-participation resolve to completed-or-abandoned with nothing left
+  hanging.
+
+**Known, non-blocking gaps, carried forward rather than hidden:**
+
+- Challenge execution is tested headlessly via the JS reference path only —
+  no real browser/WebGPU walkthrough yet (`docs/testing-strategy.md`'s
+  manual-vs-automated distinction).
+- The attacker-advantage finding (ADR-0013) has a named mitigation, not a
+  built one.
+- Publisher SDK + content gate (the secondary barter demo surface) is M4
+  scope, not M2's.
+- Five of six device tiers remain unmeasured placeholders (unchanged since
+  M0 — see [docs/device-tiers.md](device-tiers.md)).
 
 ## M3 — ZK layer
 

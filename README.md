@@ -188,7 +188,7 @@ applies in full and no anti-abuse claim is made for that mode.
 | --- | --- |
 | **M0** Economic model + device benchmark | done |
 | **M1** Worker + resource governor + Compute Consent Manifest | done; 34 tests passing |
-| **M2** Broker, tiered verification, useful-PoW challenge protocol | not started |
+| **M2** Broker, tiered verification, useful-PoW challenge protocol | done; 161 tests, [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) finding reported |
 | **M3** ZK layer — in-browser Groth16, settlement-side zkVM | not started (plan recorded, [ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md)) |
 | **M4** Demo, SDK, W3C/WICG explainer | not started |
 
@@ -254,6 +254,52 @@ reject it.
 
 ---
 
+## Verifiable compute, and an uncomfortable measurement (M2)
+
+`packages/zkpoc-broker/` turns a single governed worker into a
+multi-client system, split into two pipelines that deliberately don't share
+a verification or reward path
+([ADR-0012](docs/adr/0012-challenge-mode-single-submission-gate.md)):
+
+- **Barter** — crowdsourced compute, a worker paid for confirmed work. Shard
+  queue with lease-based assignment → commit-then-challenge verification
+  → redundancy consensus → stake-derived audit → a credit ledger that pays
+  and slashes.
+- **Challenge** — anti-bot proof-of-work, the flagship. An anonymous visitor
+  has no time to wait for a second replica and no stake, so this path skips
+  the barter machinery entirely: issue a shard, verify the one response, admit
+  or deny.
+
+Both rest on **commit-then-challenge** result verification
+([ADR-0011](docs/adr/0011-commit-then-challenge-row-verification.md)): an
+earlier design derived the check directly from public shard data, which a
+worker could satisfy in O(n) without ever running the O(n³) computation being
+paid for — found while designing consensus and asking what it would actually
+defend against. Fixed by having the worker Merkle-commit every row first;
+the challenge is derived from *that root*, so a valid one costs the real
+computation.
+
+**The finding worth stating plainly:** `bench/attacker_advantage.py`
+measured M2's stated primary risk — before any of this was built,
+[BUILD.md](docs/BUILD.md) named the concern that GPU-accelerable shard work
+might hand an attacker more advantage than a memory-hard puzzle would. It
+does: this project's own measured GEMM kernel gives a GPU-equipped attacker
+a **181.7× throughput advantage** over a CPU-bound honest device — against a
+**0.67×–4.38×** range for a memory-hard control (Argon2id, two independent
+published sources a decade apart: an 8×RTX5090 rig that was *slower* than a
+single server CPU, and a historical Titan X benchmark). **41×–271× worse**
+than the control, reported directly rather than reframed —
+[ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
+A mitigation is named (mix a memory-hard KDF into the row commitment) but not
+yet built.
+
+```sh
+npm test --prefix packages/zkpoc-broker   # 161 tests
+python bench/attacker_advantage.py
+```
+
+---
+
 ## Documentation
 
 Written as it would be kept alongside real engineering work, not
@@ -263,9 +309,10 @@ answer and the measurement that caught it, which is the part worth keeping.
 | Doc | What's in it |
 | --- | --- |
 | **[docs/BUILD.md](docs/BUILD.md)** | **The working spec — open this before writing code.** Carried constants, invariants that must not break, per-milestone design contracts and exit criteria |
+| [docs/architecture.md](docs/architecture.md) | System overview, component diagram, trust boundaries, full session data flow |
 | [docs/roadmap.md](docs/roadmap.md) | Milestone status — the source of truth the table above summarises |
 | [docs/testing-strategy.md](docs/testing-strategy.md) | Coverage map, the one test that actually matters and why, what's verified manually vs. automated |
-| [docs/adr/](docs/adr/README.md) | 8 Architecture Decision Records — the *why* behind every non-obvious design choice |
+| [docs/adr/](docs/adr/README.md) | 13 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
 | [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped, what broke, what got corrected — by milestone |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add a device measurement |
@@ -283,10 +330,13 @@ bench/device/probe.html        in-browser F(d) probe, no build step
 bench/device/sweeps/           raw multi-size sweeps
 bench/device/measurements/     per-tier F(d), consumed by breakeven.py
 bench/power/                   marginal watts via WMI battery discharge
+bench/attacker_advantage.py    GPU/CPU throughput ratio vs. memory-hard control
 packages/zkpoc-ccm/            Compute Consent Manifest — sign, verify, SPEC.md
 packages/zkpoc-worker/         resource governor + sandboxed shard worker, API.md
+packages/zkpoc-broker/         shard model, queue, consensus, audit, ledger, challenge
 demo/                          live meter, revocation, tamper tests
 docs/adr/                      Architecture Decision Records
+docs/architecture.md           system overview, trust boundaries
 docs/BUILD.md                  working spec — measured constants, invariants, phase status
 docs/roadmap.md                milestone status, source of truth
 docs/testing-strategy.md       coverage map and testing conventions

@@ -8,8 +8,134 @@ chronological version.
 
 ## [Unreleased]
 
-Nothing landed yet. M2 (broker, tiered verification, useful-PoW challenge
-protocol) is next.
+Nothing landed yet. M3 (ZK layer) is next — plan recorded ahead of
+implementation in
+[ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md) and
+[docs/BUILD.md](docs/BUILD.md#m3--zk-layer).
+
+## [M2] — 2026-08-04 — Broker, tiered verification, useful-PoW challenge protocol
+
+All 6 phases done, all 5 milestone exit criteria met. 161 tests in
+`packages/zkpoc-broker`, 195 across the monorepo. Full design contract,
+build order, and per-phase delivery notes in
+[docs/BUILD.md](docs/BUILD.md#m2--broker-tiered-verification-useful-pow-challenge-protocol).
+
+### Added
+
+- `packages/zkpoc-broker/`: new package.
+  - `src/shard.js`: deterministic-but-fresh shard inputs, bound to a session
+    nonce so results cannot be replayed or precomputed. Commit-then-challenge
+    result verification (see Fixed, below).
+  - `src/merkle.js`: row-level Merkle commitment over SHA-256, with
+    Fiat-Shamir challenge derivation.
+  - `src/tiers.js`: device-tier shard sizing from the measured M0 constants
+    (dispatch overhead, sustained throughput); refuses to size work for an
+    unmeasured tier rather than guessing (`UnmeasuredTierError`).
+  - `src/queue.js`: shard queue, lease-based assignment, replica-independence
+    enforcement across expired leases, abandonment after exhausted retries.
+  - `src/consensus.js`: per-submission gate plus majority/dispute tally over
+    a shard's replica set. The tally logic is a pure function
+    (`tallyVerifiedReplicas`) taking already-verified records, kept separate
+    from the async cryptographic gate (`verifyReplica`) specifically so
+    majority/tie/minority behaviour is testable without needing an
+    adversarial search to construct two independently-valid-but-disagreeing
+    roots for one shard. A timing-anomaly signal is advisory only and never
+    downgrades a cryptographically confirmed result — conflating "fast" with
+    "cheating" would prejudge the question M2.5's attacker-advantage-ratio
+    measurement exists to answer.
+  - `src/audit.js`: `minAuditRate(k)` mirrors
+    `bench/breakeven.py#min_audit_rate` exactly (a\* = 1/(1+k)); `auditDraw()`
+    reuses `challengeRows()`'s Fiat-Shamir pattern so audit *selection* is
+    unpredictable before a worker commits, for the same reason
+    ADR-0011 makes challenge *content* unpredictable; `auditFull()` re-verifies
+    every row instead of the k=8 sample — an honest stand-in for M3's ZK
+    proof, not a weaker approximation of it.
+  - `src/ledger.js`: stake and earned balance as separate pools (conflating
+    them would let a worker's payout fund its own deterrence bond); `slash()`
+    restricted to a closed `ViolationReason` enum.
+  - `test/dispute-resolution.test.js`: end-to-end demonstration of the
+    scenario this phase exists for — two replicas both pass the cheap gate
+    but disagree (a M2.3 dispute), a full audit is forced regardless of
+    stake, the audit exposes the liar, the ledger pays the honest party and
+    forfeits the dishonest one's stake.
+  - `src/challenge.js`: anti-bot proof-of-work issue/resolve, deliberately
+    *not* built on `ShardQueue`/`reachConsensus`/`CreditLedger` — an
+    anonymous site visitor has no time to wait for a second replica, no
+    persistent identity, and no stake to slash, so the barter pipeline's
+    assumptions don't hold for this mode. Verification is the ADR-0011
+    single-submission gate alone; a response's timing is reported as a
+    ratio against the sizing target, never used to auto-deny.
+  - `test/adversarial.test.js`: the harness that closes M2's last two exit
+    criteria together — 24 distinct simulated clients across 8 shards
+    (redundancy 3), exercising garbage results, replayed results, partial
+    cheating, Sybil identities, and selective non-participation all at
+    once, then rewarding/slashing through the ledger as a real orchestrator
+    would. Garbage and replay caught at exactly 100% across 15 independent
+    trials each (deterministic gate failures, not a probabilistic bound).
+    Partial cheating checked empirically against ADR-0011's f^k prediction
+    across 60 deterministic fixtures (varied nonces, not RNG draws — the
+    file is explicit that this is not a Monte Carlo confidence interval).
+    Sybil identities shown to *raise* their own per-identity audit exposure
+    by splitting stake, not lower it — a direct consequence of a\*=1/(1+k)
+    being per-identity.
+  - 161 tests across `shard.test.js`, `merkle.test.js`, `tiers.test.js`,
+    `queue.test.js`, `consensus.test.js`, `audit.test.js`, `ledger.test.js`,
+    `dispute-resolution.test.js`, `challenge.test.js`, `adversarial.test.js`.
+- `bench/attacker_advantage.py`: the measurement M2's design contract named
+  as its primary risk before any M2 code existed. Compares this project's
+  own measured GEMM kernel (181.7× GPU/CPU throughput ratio,
+  `bench/dispatch_analysis.py`) against a memory-hard control (Argon2id,
+  0.67×–4.38×, two independent published sources a decade apart) and the
+  real-world Anubis/SHA-256 bypass precedent (Tavis Ormandy). **Finding:**
+  the risk materialised — 41×–271× worse than the memory-hard control.
+  Reported directly, mitigation named (memory-hard KDF mixed into the row
+  commitment) but not yet built — see
+  [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
+- [ADR-0012](docs/adr/0012-challenge-mode-single-submission-gate.md),
+  [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
+- `docs/BUILD.md`: working spec carried forward between milestones — measured
+  constants (§1), invariants that must not regress (§2), definition of done
+  (§3), per-milestone design contracts and exit criteria (§4), tracked open
+  questions (§5). Referenced from `CONTRIBUTING.md` as the document to read
+  before writing code.
+- [ADR-0011](docs/adr/0011-commit-then-challenge-row-verification.md).
+
+### Fixed
+
+- **Shard verification accepted zero-work submissions.** M2.1's first design
+  derived challenge points directly from public shard data
+  (`sampleIndices(shard)`), so a worker could compute the ~8 points that
+  would be checked (O(n) each) and skip the O(n³) computation entirely,
+  passing verification with a perfect score. Found while designing M2.3 and
+  asking what redundancy consensus would actually defend against — it would
+  not have caught this, since two lazy workers agree with each other on the
+  cheap subset. Replaced with commit-then-challenge row verification: a
+  worker hashes every output row into a Merkle root, and the challenge is
+  derived from *that root*, so it cannot be known before the root exists,
+  and the root cannot exist without every row having been computed. See
+  [ADR-0011](docs/adr/0011-commit-then-challenge-row-verification.md) for the
+  full account, including the direct regression test that replays the
+  original exploit against the new scheme and confirms it now fails.
+  `sampleIndices`/`verifySamples`/the old `ShardResult` shape were removed
+  outright, not deprecated — every consumer was updated in the same change.
+- **`ShardQueue.submit()`'s duplicate-submission check was unreachable dead
+  code.** A worker's second submission for the same shard hit the
+  "assignment is submitted" branch before ever reaching the
+  `rec.results.has(...)` check meant to report `'duplicate submission'`
+  specifically — the state check ran first and always matched on a retry.
+  Reordered so the more specific, more actionable reason is checked first.
+  Caught by a test asserting the exact rejection reason, not just that
+  rejection occurred (see `docs/testing-strategy.md`'s stated convention).
+- **Two bugs in the adversarial harness itself while building it (not
+  production code, but worth the same discipline):** an arithmetic slip in
+  a hand-computed expected total (asserted 18 confirmed replicas across the
+  ≥20-client plan; the plan actually specifies 16), and a genuine
+  misunderstanding of `ShardQueue.assign()`'s contract — it auto-selects
+  the next *eligible* shard for a given worker id rather than accepting a
+  caller-chosen target, so a loop written as "for each shard id, assign a
+  worker to it" silently routed every assignment to whichever shard still
+  had room. Fixed by draining all open slots with fresh worker ids each
+  round instead of iterating shard ids directly.
 
 ## [M1] — 2026-08-03 — Worker, governor, Compute Consent Manifest
 

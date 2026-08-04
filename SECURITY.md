@@ -35,9 +35,11 @@ mechanism exists as the actual defense — see
 
 From [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md#what-this-does-not-do):
 
-- **Not guaranteed:** that the computation was performed correctly (that's a
-  separate verification layer, planned for M2/M3 — see
-  [docs/roadmap.md](docs/roadmap.md)).
+- **Not guaranteed:** that the computation was performed correctly by
+  cryptographic proof — M2's redundancy consensus and stake-derived audit
+  (`packages/zkpoc-broker`) catch free-riding and disagreement with high
+  probability, but the full replacement (a ZK proof of the computation
+  itself) is M3 scope — see [docs/roadmap.md](docs/roadmap.md).
 - **Not guaranteed:** that the platform (browser, OS) actually obeyed the
   manifest. A user running a hostile or modified browser build has no
   recourse from the manifest alone.
@@ -68,19 +70,27 @@ From [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md#what-this-does-not-
   serialisation — see [ADR-0004](docs/adr/0004-canonical-json-signing.md)
   and the mutation-coverage tests in
   [docs/testing-strategy.md](docs/testing-strategy.md).
+- **Result correctness, probabilistically.** `packages/zkpoc-broker`'s
+  commit-then-challenge scheme ([ADR-0011](docs/adr/0011-commit-then-challenge-row-verification.md))
+  means a worker cannot produce a valid Merkle root without having computed
+  every row; redundancy consensus and a stake-derived audit
+  ([ADR-0006](docs/adr/0006-audit-rate-from-inspection-game.md)) catch
+  disagreement and free-riding, and a disputed shard forces full-disclosure
+  audit regardless of stake. Staking and slashing (`ledger.js`) are real,
+  running code, not just a design.
 
 ## What is not yet enforced (tracked, not hidden)
 
 - Storage and network denial (`data_access.storage`, `.network`) are manifest
   *claims* the embedding page is expected to enforce; there is no independent
   runtime proof of containment yet.
-- There is no on-chain or third-party verification that a worker's *results*
-  are correct — that's the redundancy/audit layer, designed in
-  [ADR-0006](docs/adr/0006-audit-rate-from-inspection-game.md) but not yet
-  implemented (M2).
-- The staking/slashing mechanism the audit-rate policy assumes doesn't exist
-  yet, so the economic deterrence argument in ADR-0006 is currently a design,
-  not a running guarantee.
+- Result correctness is enforced probabilistically (redundancy + audit), not
+  by cryptographic proof of the computation itself — that's a ZK circuit,
+  M3 scope, not yet implemented.
+- The attacker-advantage ratio for challenge-mode work is measured and
+  reported as unfavourable relative to a memory-hard control
+  ([ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md));
+  a mitigation is named but not yet built.
 
 ## Reporting a vulnerability
 
