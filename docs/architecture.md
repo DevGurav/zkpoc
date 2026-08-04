@@ -19,7 +19,8 @@ why it's structured this way rather than around miner detection.
 ```mermaid
 flowchart TB
     subgraph Page["Publisher page"]
-        SDK["zkpoc-sdk (planned, M4)"]
+        SDK["@zkpoc/sdk\n(issueSession/attachGovernor/runSession, M4, done)"]
+        Widget["@zkpoc/challenge\n(client-side solver, M4, done)"]
     end
 
     subgraph Trust["Consent layer — packages/zkpoc-ccm"]
@@ -48,9 +49,10 @@ flowchart TB
         Contracts["ShardRowVerifier.sol\n(generated, committed)"]
     end
 
-    subgraph Planned["Planned — M4 / blocked"]
+    subgraph Planned["Not done — blocked or deliberately deferred"]
         ZkVM["Track 2: RISC Zero/SP1\nsettlement-side measurement\n(environment-blocked, ADR-0014)"]
-        SDKPkg["zkpoc-sdk"]
+        Detectors["MinerRay/MINOS/Delay-CJ\ndetector baselines\n(no installable distribution, ADR-0015)"]
+        Hosted["Hosted demo, npm publish\n(deliberately not pushed/published)"]
     end
 
     SDK -->|"1. request manifest"| Issue
@@ -66,6 +68,7 @@ flowchart TB
     ShardMod --> Challenge
     Gov -.->|"barter mode: shard result"| Queue
     Gov -.->|"challenge mode: single response"| Challenge
+    Widget -->|"solveChallenge()"| Challenge
 
     Audit -.->|"M3: proof, not yet wired in\n(replaces full disclosure — Q4)"| Circuits
     Circuits --> Contracts
@@ -84,7 +87,11 @@ flowchart TB
 | `contracts/` | Generated Solidity Groth16 verifier | **Done** — M3 Track 1 |
 | `zk/` | Isolated circom2/snarkjs/Hardhat toolchain (build + test), not in root workspaces | **Done** — M3 Track 1, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
 | Track 2 (settlement-side zkVM) | RISC Zero/SP1 proving-overhead measurement | **Blocked** — no Rust toolchain in this environment, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
-| `explainer/` | W3C/WICG Compute Consent Manifest explainer | Planned — M4 |
+| `packages/zkpoc-sdk/` | Publisher integration — issue, verify, run a governed session | **Done** — M4, 5 tests |
+| `packages/zkpoc-challenge/` | Anti-bot widget — client-side challenge solver | **Done** — M4, 3 tests |
+| `explainer/` | W3C/WICG Compute Consent Manifest explainer | **Done** — M4, experimental/project-local |
+| Dual-use detector baselines (MinerRay/MINOS/Delay-CJ) | Run against this system, report the outcome | **Blocked** — no installable distribution, [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md) |
+| Hosted demo, npm publish | Public deploy of `demo/`, `@zkpoc/sdk` + `@zkpoc/challenge` on the registry | **Deliberately not done** — externally-visible actions left to the maintainer |
 
 See [roadmap.md](roadmap.md) for the milestone breakdown this table summarises.
 

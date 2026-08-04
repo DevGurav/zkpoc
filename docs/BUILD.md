@@ -360,14 +360,40 @@ and a tampered proof point are each independently rejected. Track 2's
 overhead table is **not produced** — environment-blocked, see above; Q2
 below stays open rather than answered with a guess.
 
-### M4 — Demo, SDK, standards, dual-use evaluation
+### M4 — Demo, SDK, standards, dual-use evaluation — packages/explainer/evaluation DONE, deploy/publish/outreach deliberately not sent
 
-- Hosted one-click demo; `zkpoc-challenge` + `zkpoc-sdk` published.
-- W3C/WICG explainer built from [SPEC.md](../packages/zkpoc-ccm/SPEC.md).
-- **Dual-use evaluation** per [ADR-0002](adr/0002-legitimacy-by-declaration-not-detection.md):
-  run MinerRay/MINOS/Delay-CJ and *expect and report* that they cannot
-  distinguish this system from covert mining, then demonstrate the
-  manifest/code-binding path as the actual legitimacy mechanism.
+- **`@zkpoc/sdk` — done.** Wraps `@zkpoc/ccm` + `@zkpoc/worker` into a
+  five-line publisher integration (`packages/zkpoc-sdk/`, 5 tests).
+  `issueSession`/`attachGovernor` testable headlessly; `runSession` is the
+  browser-only convenience, refusing to construct a `Governor` at all when
+  verification fails.
+- **`@zkpoc/challenge` — done.** Client-side solver for the anti-bot
+  protocol (`packages/zkpoc-challenge/`, 3 tests), interoperating directly
+  with `packages/zkpoc-broker/src/challenge.js`'s server half. Reference
+  (JS/CPU) solve path only — a WGSL-accelerated solve path is named as
+  future work, not built.
+- **W3C/WICG explainer — done.** [`explainer/index.md`](../explainer/index.md),
+  built from `packages/zkpoc-ccm/SPEC.md`, explicit about being
+  experimental/project-local and not filed with any standards body yet.
+- **Dual-use evaluation — done, per** [ADR-0002](adr/0002-legitimacy-by-declaration-not-detection.md)**.**
+  MinerRay/MINOS/Delay-CJ have no installable distribution in this
+  environment (checked, not assumed) — reported environment-blocked rather
+  than faked, matching M3 Track 2's precedent. The manifest/code-binding
+  verification path is demonstrated as the real, already-built, already-tested
+  defense in their place. See [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md),
+  [docs/dual-use-evaluation.md](dual-use-evaluation.md).
+- **Outreach material — drafted, not sent.** [`docs/outreach.md`](outreach.md)
+  has target-specific pitch content grounded in this project's actual
+  measurements. Sending it is a business-development action outside this
+  project's automation, deliberately left to the maintainer.
+- **Hosted one-click demo — not deployed.** `.nojekyll` and a root
+  redirect to `/demo/` are in place for a future GitHub Pages deploy
+  (`Settings → Pages → Deploy from branch → main → / (root)`), but nothing
+  has been pushed or enabled — `demo/index.html` still runs locally only,
+  via `python -m http.server`.
+- **npm publish — not done.** Both packages are built and tested; `npm
+  publish` was deliberately not run (would need the maintainer's npm
+  credentials and is a one-way, externally-visible action).
 
 ---
 

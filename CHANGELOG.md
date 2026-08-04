@@ -8,7 +8,48 @@ chronological version.
 
 ## [Unreleased]
 
-Nothing landed yet. M4 (demo, SDK, standards, outreach) is next.
+Nothing landed yet.
+
+## [M4] — 2026-08-04 — Demo, SDK, standards, dual-use evaluation
+
+Packages, explainer, and dual-use evaluation done. Demo hosting, npm
+publish, and outreach sending deliberately not attempted — see
+[docs/roadmap.md](docs/roadmap.md#m4--demo-packaging-standards-outreach).
+
+### Added
+
+- `packages/zkpoc-sdk/`: `issueSession`/`attachGovernor`/`runSession` --
+  wraps `@zkpoc/ccm` + `@zkpoc/worker` into the five-line publisher
+  integration `demo/index.html` does by hand across ~40 lines. The first
+  cross-package dependency in the monorepo; uses relative imports rather
+  than bare `@zkpoc/...` specifiers so it works with no `npm install`,
+  matching the rest of the project. 5 tests.
+- `packages/zkpoc-challenge/`: `solveChallenge`/`runChallenge` -- the
+  client half of the anti-bot challenge protocol, interoperating directly
+  with `packages/zkpoc-broker/src/challenge.js`'s server half. Reference
+  (JS/CPU) solve path; a WGSL-accelerated path is named as future work. 3
+  tests.
+- `explainer/index.md`: W3C/WICG-format explainer for the Compute Consent
+  Manifest, built from `packages/zkpoc-ccm/SPEC.md`. Marked experimental
+  and project-local, not filed with any standards body.
+- `docs/dual-use-evaluation.md`, [ADR-0015](docs/adr/0015-dual-use-detectors-environment-blocked.md):
+  MinerRay/MINOS/Delay-CJ confirmed to have no installable distribution
+  (npm/PyPI lookups resolve to unrelated same-named packages) -- reported
+  environment-blocked rather than faked, same treatment M3 Track 2 got.
+  Demonstrates the manifest/code-binding verification path
+  ([ADR-0002](docs/adr/0002-legitimacy-by-declaration-not-detection.md))
+  as the real defense in their place.
+- `docs/outreach.md`: drafted (not sent) pitch material for Cloudflare,
+  Friendly Captcha, ALTCHA, mCaptcha, Anubis, Brave, and Mozilla/WICG,
+  grounded in this project's actual measured results.
+- `.nojekyll`, root `index.html` redirect to `/demo/`: local prep for a
+  future GitHub Pages deploy, not pushed or enabled.
+
+### Deliberately not done
+
+- Demo not hosted (`demo/index.html` still local-only).
+- Neither package published to npm (needs the maintainer's own credentials).
+- `docs/outreach.md`'s pitches not sent to anyone.
 
 ## [M3] — 2026-08-04 — ZK layer: Track 1 (Circom/Groth16) done, Track 2 blocked
 

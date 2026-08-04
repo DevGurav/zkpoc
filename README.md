@@ -190,7 +190,7 @@ applies in full and no anti-abuse claim is made for that mode.
 | **M1** Worker + resource governor + Compute Consent Manifest | done; 34 tests passing |
 | **M2** Broker, tiered verification, useful-PoW challenge protocol | done; 161 tests, [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) finding reported |
 | **M3** ZK layer — in-browser Groth16, settlement-side zkVM | Track 1 done, Track 2 environment-blocked ([ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md), [ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md)) |
-| **M4** Demo, SDK, W3C/WICG explainer | not started |
+| **M4** Demo, SDK, W3C/WICG explainer | packages + explainer + dual-use evaluation done; deploy/publish/outreach deliberately not sent |
 
 This table is a summary. [docs/roadmap.md](docs/roadmap.md) is the source of
 truth — exit criteria, what shipped, and what's still open per milestone.
@@ -336,6 +336,45 @@ no WASM/npm-installable distribution, and none is available here. Rather
 than substitute a guessed number, `c_proof` stays a range — see ADR-0014 and
 `docs/BUILD.md`'s Q2.
 
+---
+
+## Packaged, explained, and honestly scoped (M4)
+
+Two npm-shaped packages turn the pieces above into drop-in integrations:
+
+- **[`@zkpoc/sdk`](packages/zkpoc-sdk/)** — the five-line publisher
+  integration (`runSession()`) that issues a manifest, verifies it, and
+  runs the governed worker session, wrapping `@zkpoc/ccm` + `@zkpoc/worker`.
+- **[`@zkpoc/challenge`](packages/zkpoc-challenge/)** — the client half of
+  the anti-bot challenge protocol, interoperating directly with
+  `packages/zkpoc-broker/src/challenge.js`'s server half.
+
+**[`explainer/index.md`](explainer/index.md)** translates the Compute
+Consent Manifest for a standards audience — goals, explicit non-goals, use
+cases, privacy/security considerations — marked experimental and
+project-local, not filed with W3C or WICG.
+
+**Dual-use evaluation, closed via the declaration path, not detection.**
+The plan named MinerRay/MINOS/Delay-CJ as baselines to run; none have an
+installable distribution (checked, not assumed — npm/PyPI lookups resolve
+to unrelated same-named packages), so the finding is reported
+environment-blocked, same treatment M3 Track 2 got, rather than faked.
+[ADR-0002](docs/adr/0002-legitimacy-by-declaration-not-detection.md)
+already predicted this outcome doesn't matter either way — a detector WASM
+diversification evades in 100% of cases can't certify legitimacy regardless
+— and [docs/dual-use-evaluation.md](docs/dual-use-evaluation.md)
+demonstrates the actual defense: the manifest/code-binding verification
+path, already built, already tested.
+[ADR-0015](docs/adr/0015-dual-use-detectors-environment-blocked.md).
+
+**Stated plainly, three things in the original M4 scope were deliberately
+not done:** the demo isn't hosted (still local-only via
+`python -m http.server`; `.nojekyll` and a root redirect are staged for a
+future GitHub Pages deploy), neither package is published to npm, and
+[`docs/outreach.md`](docs/outreach.md)'s drafted pitch material hasn't been
+sent to anyone. All three are one-way, externally-visible actions outside
+what this project automates on its own.
+
 ## Documentation
 
 Written as it would be kept alongside real engineering work, not
@@ -348,14 +387,19 @@ answer and the measurement that caught it, which is the part worth keeping.
 | [docs/architecture.md](docs/architecture.md) | System overview, component diagram, trust boundaries, full session data flow |
 | [docs/roadmap.md](docs/roadmap.md) | Milestone status — the source of truth the table above summarises |
 | [docs/testing-strategy.md](docs/testing-strategy.md) | Coverage map, the one test that actually matters and why, what's verified manually vs. automated |
-| [docs/adr/](docs/adr/README.md) | 14 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
+| [docs/adr/](docs/adr/README.md) | 15 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
 | [zk/README.md](zk/README.md) | M3 Track 1 toolchain: build/test instructions, toy-ceremony caveat, tooling bugs worked around |
 | [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
+| [docs/dual-use-evaluation.md](docs/dual-use-evaluation.md) | M4: why the detector baselines are environment-blocked, and what stands in their place |
+| [docs/outreach.md](docs/outreach.md) | M4: drafted (not sent) pitch material, per target |
+| [explainer/index.md](explainer/index.md) | W3C/WICG-format Compute Consent Manifest explainer |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped, what broke, what got corrected — by milestone |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add a device measurement |
 | [SECURITY.md](SECURITY.md) | Threat model, the dual-use question stated head-on, what is and isn't enforced today |
-| [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md) | Compute Consent Manifest format — the input to a planned W3C/WICG explainer |
+| [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md) | Compute Consent Manifest format — the input to the explainer above |
 | [packages/zkpoc-worker/API.md](packages/zkpoc-worker/API.md) | `Governor` API, worker message protocol, kernel exports |
+| [packages/zkpoc-sdk/README.md](packages/zkpoc-sdk/README.md) | Publisher integration — the five-line snippet, the headless/browser split |
+| [packages/zkpoc-challenge/README.md](packages/zkpoc-challenge/README.md) | Anti-bot widget — client-side solver, wire protocol |
 
 ## Layout
 
@@ -371,16 +415,21 @@ bench/attacker_advantage.py    GPU/CPU throughput ratio vs. memory-hard control
 packages/zkpoc-ccm/            Compute Consent Manifest — sign, verify, SPEC.md
 packages/zkpoc-worker/         resource governor + sandboxed shard worker, API.md
 packages/zkpoc-broker/         shard model, queue, consensus, audit, ledger, challenge
+packages/zkpoc-sdk/            publisher integration — issue, verify, run a session
+packages/zkpoc-challenge/      anti-bot widget — client-side challenge solver
 circuits/quant_dot.circom      M3 Track 1 Groth16 circuit
 contracts/ShardRowVerifier.sol generated Solidity verifier (committed, regenerable)
 zk/                             isolated circom2/snarkjs/Hardhat toolchain, README.md
 demo/                          live meter, revocation, tamper tests
+explainer/index.md             W3C/WICG-format Compute Consent Manifest explainer
 docs/adr/                      Architecture Decision Records
 docs/architecture.md           system overview, trust boundaries
 docs/BUILD.md                  working spec — measured constants, invariants, phase status
 docs/roadmap.md                milestone status, source of truth
 docs/testing-strategy.md       coverage map and testing conventions
 docs/device-tiers.md           tier provenance + what measurement changed
+docs/dual-use-evaluation.md    M4: detector baselines environment-blocked, the real defense
+docs/outreach.md               M4: drafted (not sent) pitch material
 CHANGELOG.md, CONTRIBUTING.md, SECURITY.md
 ```
 

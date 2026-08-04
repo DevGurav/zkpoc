@@ -12,7 +12,7 @@ right and the README needs updating.
 | M1 — Worker, governor, Compute Consent Manifest | **Done** | Yes — see below |
 | M2 — Broker, tiered verification, useful-PoW challenge protocol | **Done** | Yes — all 5, see below |
 | M3 — ZK layer (in-browser Groth16 + settlement-side zkVM) | **Track 1 done, Track 2 environment-blocked** ([ADR-0007](adr/0007-tiered-zk-proving-plan.md), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md)) | Track 1 yes; Track 2 not attemptable here |
-| M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Not started** | — |
+| M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Packages/explainer/evaluation done; deploy, npm publish, outreach deliberately not sent** ([ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md)) | See below |
 
 ---
 
@@ -186,25 +186,51 @@ dependency isolation, Track 2's outcome) are in
 
 ## M4 — Demo, packaging, standards, outreach
 
-**Not started.** Planned scope:
+**Exit criteria (from the original plan):** demo URL completes a full cycle
+on a clean profile; `npm i` + the five-line snippet works in a fresh
+project; detector baselines run with the outcome reported honestly either
+way, alongside the manifest-verification path.
 
-- Hosted one-click demo (current `demo/index.html` runs locally over
-  `python -m http.server`; not yet deployed).
-- `zkpoc-challenge` + `zkpoc-sdk` on npm; worker crate packaging.
-- W3C/WICG Compute Consent Manifest explainer, built from
+**Delivered:**
+
+- `packages/zkpoc-sdk/` — five-line publisher integration wrapping
+  `@zkpoc/ccm` + `@zkpoc/worker` (`issueSession`/`attachGovernor`/`runSession`),
+  5 tests. `npm i` isn't meaningful yet since nothing is published (see
+  Deliberately not done, below), but the snippet itself works today against
+  the packages as committed.
+- `packages/zkpoc-challenge/` — the client half of the anti-bot challenge
+  protocol, interoperating directly with `packages/zkpoc-broker/src/challenge.js`'s
+  server half, 3 tests.
+- `explainer/index.md` — W3C/WICG-format explainer built from
   `packages/zkpoc-ccm/SPEC.md`.
-- **Dual-use evaluation**, reframed per
-  [ADR-0002](adr/0002-legitimacy-by-declaration-not-detection.md): run
-  MinerRay/MINOS/Delay-CJ baselines and *expect and report* that they cannot
-  reliably distinguish this system from covert mining, citing the WASM
-  diversification evasion result as evidence this is a property of
-  detection-based approaches generally, not a defect specific to this design
-  — then demonstrate the positive path (independent manifest/code-binding
-  verification) as the actual legitimacy mechanism.
-- Outreach: Cloudflare, Friendly Captcha, ALTCHA, mCaptcha, Anubis
-  maintainers (bot-deterrence deployment slot); Brave, Mozilla/WICG (consent
-  and governance angle). See the original plan's "Making it visible to a
-  large company" section for the full sequencing rationale.
+- **Dual-use evaluation, closed via the declaration path.** MinerRay/MINOS/
+  Delay-CJ have no installable distribution — confirmed, not assumed (npm
+  and PyPI lookups resolve to unrelated same-named packages) — and reported
+  environment-blocked rather than faked, the same treatment M3 Track 2 got.
+  [ADR-0002](adr/0002-legitimacy-by-declaration-not-detection.md)'s
+  predicted outcome (detection can't certify legitimacy either way) stands
+  regardless; [docs/dual-use-evaluation.md](dual-use-evaluation.md)
+  demonstrates the manifest/code-binding path as the real, already-tested
+  defense. [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md).
+- `docs/outreach.md` — pitch material for Cloudflare, Friendly Captcha,
+  ALTCHA, mCaptcha, Anubis (bot-deterrence angle), Brave, Mozilla/WICG
+  (consent/governance angle), grounded in this project's actual measured
+  results rather than the original plan's projected ones.
+- `.nojekyll` + a root `index.html` redirect to `/demo/`, in place for a
+  future GitHub Pages deploy.
+
+**Deliberately not done, by explicit choice rather than oversight:**
+
+- **The demo is not hosted.** `demo/index.html` still runs locally only,
+  via `python -m http.server`. Enabling GitHub Pages (a one-click repo
+  Settings action: Deploy from branch → main → / (root)) and pushing are
+  left to the maintainer — an externally-visible action outside this
+  project's automation.
+- **Neither package is published to npm.** Both are built and tested;
+  `npm publish` needs the maintainer's own npm credentials and is a
+  one-way action.
+- **`docs/outreach.md`'s pitches have not been sent to anyone.** Sending
+  them is a business-development action, not a software one.
 
 ---
 
