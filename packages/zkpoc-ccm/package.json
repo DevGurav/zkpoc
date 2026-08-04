@@ -1,0 +1,22 @@
+{
+  "name": "@zkpoc/ccm",
+  "version": "0.1.0",
+  "description": "Compute Consent Manifest — signed, third-party-verifiable declarations for browser compute workloads",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./canonical": "./src/canonical.js",
+    "./schema": "./src/schema.js"
+  },
+  "files": ["index.js", "src/", "SPEC.md"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "consent", "webgpu", "webassembly", "cryptojacking",
+    "verifiable-compute", "web-monetization"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
