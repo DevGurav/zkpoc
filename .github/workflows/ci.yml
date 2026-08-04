@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Read-only by default -- this workflow only runs tests, it doesn't need
+# write access to anything.
+permissions:
+  contents: read
+
+jobs:
+  # packages/* have zero runtime dependencies and no cross-package imports
+  # by design (CONTRIBUTING.md) -- no npm install anywhere in this job,
+  # on purpose, so a broken "works on my machine after install" story can
+  # never hide here.
+  js-tests:
+    name: JS tests (213, zero install)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm test
+
+  # bench/*.py are stdlib-only and self-verifying: each script asserts its
+  # own reconstructed numbers against known values and fails loudly
+  # (AssertionError) if they diverge -- "runs to completion" IS the test,
+  # per docs/testing-strategy.md.
+  bench-scripts:
+    name: Economic model scripts (stdlib only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python bench/tdsc_reproduction.py
+      - run: python bench/breakeven.py
+      - run: python bench/attacker_advantage.py
+
+  # zk/ is the one deliberately-isolated heavy-dependency subtree in this
+  # repo (ADR-0014) -- circom2 compile, a toy powers-of-tau ceremony,
+  # Groth16 setup, then an on-chain verify against a real Shard-derived
+  # witness. Runs on its own since it needs its own npm install.
+  zk-toolchain:
+    name: ZK circuit build + on-chain verifier (4 tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: zk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: zk/package-lock.json
+      - run: npm install
+      - run: npm run build
+      - run: npm test

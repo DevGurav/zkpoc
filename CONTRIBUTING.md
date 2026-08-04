@@ -92,6 +92,12 @@ version:
   read the real file with `readFile`, don't hardcode a fixture string that
   can drift out of sync with the thing it's supposed to represent.
 
+**CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every
+push/PR to `main`: the JS suite with zero install (matching the setup
+section above — if CI needed `npm install` to pass, that would itself be a
+bug), the `bench/` economic scripts, and `zk/`'s isolated toolchain
+separately, since it's the one subtree that does need its own install.
+
 ## Architecture Decision Records
 
 If you make a decision that would be expensive for someone else to

@@ -1,5 +1,11 @@
 # ZK-PoC
 
+[![CI](https://github.com/DevGurav/zkpoc/actions/workflows/ci.yml/badge.svg)](https://github.com/DevGurav/zkpoc/actions/workflows/ci.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
+[![npm @zkpoc/ccm](https://img.shields.io/npm/v/%40zkpoc%2Fccm.svg?label=%40zkpoc%2Fccm)](https://www.npmjs.com/package/@zkpoc/ccm)
+[![npm @zkpoc/worker](https://img.shields.io/npm/v/%40zkpoc%2Fworker.svg?label=%40zkpoc%2Fworker)](https://www.npmjs.com/package/@zkpoc/worker)
+[![npm @zkpoc/broker](https://img.shields.io/npm/v/%40zkpoc%2Fbroker.svg?label=%40zkpoc%2Fbroker)](https://www.npmjs.com/package/@zkpoc/broker)
+
 **Consent-governed, verifiable browser compute — and an honest measurement of
 whether it can pay for anything.**
 
@@ -447,6 +453,7 @@ docs/roadmap.md                milestone status, source of truth
 docs/testing-strategy.md       coverage map and testing conventions
 docs/device-tiers.md           tier provenance + what measurement changed
 docs/dual-use-evaluation.md    M4: detector baselines environment-blocked, the real defense
+.github/workflows/ci.yml       JS tests + bench scripts + zk/ toolchain, on every push/PR
 CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, LICENSE-MIT, LICENSE-APACHE
 ```
 
