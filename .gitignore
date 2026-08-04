@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# ZK circuit build artifacts -- large, binary, deterministically regenerable
+# via zk/scripts/build.js. The circuit source (circuits/*.circom) and the
+# final Solidity verifier (contracts/*.sol) ARE committed; everything in
+# between (r1cs, wasm witness generator, ptau ceremony files, proving/
+# verification keys, witnesses, proofs) is not.
+zk/build/
+zk/artifacts/
+zk/cache/
+*.ptau
+*.zkey
+*.r1cs
+*.wtns
+
+# Editor/OS
+.DS_Store
+Thumbs.db
+
+# Local tooling config, not part of the project
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+
+# Planning artifact, not project documentation
+docs/i-have-give-you-memoized-lantern.md

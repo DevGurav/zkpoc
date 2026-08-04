@@ -1,0 +1,5 @@
+# Regenerable run output -- re-produced by measure-windows.ps1 / breakeven.py.
+# The actual measurement evidence (bench/device/measurements/, sweeps/) is
+# committed; these are scratch logs from re-running the scripts locally.
+power/power-log.csv
+out/

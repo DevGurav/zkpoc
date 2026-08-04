@@ -1,0 +1,15 @@
+{
+  "name": "zk-poc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consent-governed, verifiable browser compute — and an honest measurement of whether it can pay for anything",
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "node --test packages/*/test/*.test.js",
+    "bench": "python bench/tdsc_reproduction.py && python bench/breakeven.py && python bench/attacker_advantage.py",
+    "serve": "python -m http.server 8000"
+  },
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
