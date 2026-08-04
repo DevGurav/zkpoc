@@ -1,0 +1,46 @@
+{
+  "schema": "zkpoc.device-probe/1",
+  "captured_at": "2026-08-03T15:35:49.225Z",
+  "derived_from": "device/sweeps/intel-gen12lp-sustained-1024.json",
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "cores": 8,
+    "memory_gb": 16,
+    "webgpu": true,
+    "adapter": {
+      "vendor": "intel",
+      "architecture": "gen-12lp"
+    },
+    "limits": {
+      "maxComputeWorkgroupStorageSize": 32768,
+      "maxBufferSize": 2147483648
+    },
+    "battery_at_start": 0.34,
+    "charging": false
+  },
+  "watts_full": 9.1,
+  "watts_note": "measured via bench/power: load 26902 mW - idle avg(18480,17120) mW, energy-counter method (mWh delta), baseline drift 8% (within the 15% confidence threshold)",
+  "analysis": {
+    "dispatch_overhead_ms": 4.014,
+    "marginal_throughput_gflops": 92.58,
+    "min_shard_n_for_10pct_overhead": 1187,
+    "statistic_used": "sustained-steady, OLS trend fit over a 120s N=1024 run, first 16s excluded as warmup",
+    "note": "results.gpu.gflops (107.2) supersedes the 75.35 figure from the original 7-rep quick sweep, which was contaminated by pipeline warmup rather than measuring true throughput -- the 120s run shows a flat +2.4%/min trend (within sampling noise), not the thermal decay originally hypothesized in docs/device-tiers.md. dispatch_overhead_ms and marginal_throughput_gflops still come from the separate multi-size regression (dispatch_analysis.py) and are kept for the shard-sizing calculation; marginal_throughput_gflops is likely itself modestly warmup-biased low, since it was fit from the same contaminated quick-sweep medians -- prefer results.gpu.gflops as F(d)."
+  },
+  "config": {
+    "matrix_n": 1024,
+    "duty_cycle": 1.0,
+    "sustained_s": 120
+  },
+  "results": {
+    "gpu": {
+      "path": "webgpu-wgsl",
+      "gflops": 107.2,
+      "stdev_gflops": 4.08,
+      "cv_pct": 3.8,
+      "correct": true,
+      "statistic": "sustained-steady-ols"
+    }
+  }
+}

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZK-PoC device probe</title>
+<style>
+  :root { color-scheme: light dark; --fg:#111; --bg:#fff; --mut:#666; --acc:#0a5; --bd:#ddd; --warn:#a50; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg:#e6e6e6; --bg:#111; --mut:#999; --acc:#3c9; --bd:#333; --warn:#da3; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:1.5rem; font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+         color:var(--fg); background:var(--bg); }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size:1.15rem; margin:0 0 .25rem; }
+  h2 { font-size:.95rem; margin:1.6rem 0 .5rem; color:var(--acc); }
+  p.sub { color:var(--mut); margin:0 0 1.25rem; }
+  button { font:inherit; padding:.5rem 1rem; border:1px solid var(--bd); border-radius:6px;
+           background:transparent; color:var(--fg); cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--acc); color:var(--acc); }
+  button:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin:.5rem 0; }
+  table { border-collapse:collapse; width:100%; margin:.4rem 0; }
+  th,td { text-align:left; padding:.3rem .6rem .3rem 0; border-bottom:1px solid var(--bd);
+          vertical-align:top; }
+  th { color:var(--mut); font-weight:normal; }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  pre { background:color-mix(in srgb, var(--fg) 6%, transparent); padding:.75rem;
+        border-radius:6px; overflow-x:auto; font-size:12px; }
+  .mut { color:var(--mut); }
+  .warn { color:var(--warn); }
+  .bar { height:6px; background:var(--bd); border-radius:3px; overflow:hidden; margin:.4rem 0; }
+  .bar > i { display:block; height:100%; background:var(--acc); width:0; transition:width .2s; }
+  label { color:var(--mut); }
+  select,input { font:inherit; background:transparent; color:var(--fg);
+                 border:1px solid var(--bd); border-radius:4px; padding:.25rem .4rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>ZK-PoC device probe</h1>
+<p class="sub">
+  Measures achievable F(d) — GFLOPS through the browser — on the WebGPU and CPU
+  paths, at a controlled duty cycle. Output feeds <code>DEFAULT_TIERS</code> in
+  <code>bench/breakeven.py</code>, replacing the literature-anchored placeholders.
+</p>
+
+<h2>1 · Device</h2>
+<table id="dev"></table>
+
+<h2>2 · Benchmark</h2>
+<div class="row">
+  <label>matrix N <select id="size">
+    <option value="256">256</option>
+    <option value="512" selected>512</option>
+    <option value="1024">1024</option>
+  </select></label>
+  <label>duty cycle <select id="duty">
+    <option value="1.00" selected>100% (peak F(d))</option>
+    <option value="0.25">25%</option>
+    <option value="0.05">5% (the design ceiling)</option>
+  </select></label>
+  <label>reps <input id="reps" type="number" value="7" min="3" max="31" style="width:4rem"></label>
+  <label>mode <select id="mode">
+    <option value="reps" selected>quick (reps)</option>
+    <option value="60">sustained 60 s</option>
+    <option value="120">sustained 120 s</option>
+    <option value="300">sustained 300 s</option>
+  </select></label>
+</div>
+<div class="row">
+  <button id="run">Run probe</button>
+  <button id="copy" disabled>Copy JSON</button>
+  <span id="status" class="mut"></span>
+</div>
+<div class="bar"><i id="prog"></i></div>
+
+<h2>3 · Results</h2>
+<table id="res"><tr><td class="mut">not run yet</td></tr></table>
+
+<h2>4 · Export</h2>
+<pre id="json" class="mut">run the probe to generate</pre>
+
+<p class="mut" style="font-size:12px">
+  <strong>Which mode to use.</strong> <em>Quick (reps)</em> is for separating
+  dispatch overhead from throughput — sweep N=256/512/1024 and feed the three
+  runs to <code>bench/dispatch_analysis.py</code>. It is <em>not</em> valid for
+  F(d): seven dispatches at N=1024 is ~200&nbsp;ms of GPU work, so the clock has
+  barely begun to drop and the result reflects turbo. Use a
+  <em>sustained</em> run for any number that goes into the economic model, and
+  check it reports <span class="mut">plateaued</span> — if it did not, the
+  steady figure is still an upper bound and the run needed to be longer.
+  <br><br>
+  <strong>Scope.</strong> The CPU row uses a JS typed-array kernel, which is a
+  defensible lower bound but not the Rust→WASM SIMD path — that kernel lands in
+  M1 and will replace this row. It is skipped in sustained mode. The WebGPU row
+  is the one that matters: the break-even model shows the CPU path is
+  economically dead regardless.
+  <br><br>
+  <strong>Energy.</strong> Browsers expose no power draw. Battery Status is
+  sampled where available, but real W(d) needs host-side RAPL / Intel Power
+  Gadget / powermetrics — see <code>bench/power/</code>. Quantifying energy and
+  thermal effects is the gap FibRace (arXiv:2510.14693 §5.1.3) explicitly left
+  open, so it is instrumented deliberately rather than assumed.
+</p>
+
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (v, d = 2) => (v === null || v === undefined || Number.isNaN(v)) ? '—' : v.toFixed(d);
+
+// ---------------------------------------------------------------- device info
+async function deviceInfo() {
+  const nav = navigator;
+  const info = {
+    ua: nav.userAgent,
+    platform: nav.platform || null,
+    cores: nav.hardwareConcurrency ?? null,
+    // deviceMemory is a coarse GiB bucket and Chromium-only. FibRace found
+    // >=3 GB is the floor for client-side proving, so it is worth capturing.
+    memory_gb: nav.deviceMemory ?? null,
+    webgpu: false, adapter: null, battery: null,
+  };
+  if (nav.gpu) {
+    try {
+      const ad = await nav.gpu.requestAdapter();
+      if (ad) {
+        info.webgpu = true;
+        const i = ad.info ?? (ad.requestAdapterInfo ? await ad.requestAdapterInfo() : null);
+        if (i) info.adapter = {
+          vendor: i.vendor || null, architecture: i.architecture || null,
+          device: i.device || null, description: i.description || null,
+        };
+        info.limits = {
+          maxComputeWorkgroupStorageSize: ad.limits?.maxComputeWorkgroupStorageSize ?? null,
+          maxBufferSize: ad.limits?.maxBufferSize ?? null,
+        };
+      }
+    } catch (e) { info.adapter_error = String(e); }
+  }
+  if (nav.getBattery) {
+    try {
+      const b = await nav.getBattery();
+      info.battery = { level: b.level, charging: b.charging,
+                       dischargingTime: Number.isFinite(b.dischargingTime) ? b.dischargingTime : null };
+    } catch {}
+  }
+  return info;
+}
+
+function renderDevice(d) {
+  const rows = [
+    ['user agent', d.ua],
+    ['logical cores', d.cores ?? 'unavailable'],
+    ['device memory', d.memory_gb ? d.memory_gb + ' GB (coarse)' : 'unavailable'],
+    ['WebGPU', d.webgpu ? 'available' : 'NOT AVAILABLE — CPU path only'],
+    ['GPU adapter', d.adapter
+      ? [d.adapter.vendor, d.adapter.architecture, d.adapter.device, d.adapter.description]
+          .filter(Boolean).join(' / ') || 'reported, unnamed'
+      : '—'],
+    ['battery', d.battery
+      ? `${(d.battery.level * 100).toFixed(0)}% ${d.battery.charging ? '(charging)' : '(discharging)'}`
+      : 'Battery Status API unavailable'],
+  ];
+  $('dev').innerHTML = rows.map(([k, v]) =>
+    `<tr><th>${k}</th><td>${String(v).replace(/</g, '&lt;')}</td></tr>`).join('');
+}
+
+// ------------------------------------------------------------------ CPU path
+// Blocked matmul over Float32Array. 2*N^3 FLOPs. Not SIMD — a lower bound.
+function cpuMatmul(N, A, B, C) {
+  const BS = 64;
+  C.fill(0);
+  for (let ii = 0; ii < N; ii += BS) {
+    const iMax = Math.min(ii + BS, N);
+    for (let kk = 0; kk < N; kk += BS) {
+      const kMax = Math.min(kk + BS, N);
+      for (let jj = 0; jj < N; jj += BS) {
+        const jMax = Math.min(jj + BS, N);
+        for (let i = ii; i < iMax; i++) {
+          const iN = i * N;
+          for (let k = kk; k < kMax; k++) {
+            const a = A[iN + k];
+            if (a === 0) continue;
+            const kN = k * N;
+            for (let j = jj; j < jMax; j++) C[iN + j] += a * B[kN + j];
+          }
+        }
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------- WebGPU path
+const WGSL = `
+struct Dims { n: u32 };
+@group(0) @binding(0) var<storage, read>       A : array<f32>;
+@group(0) @binding(1) var<storage, read>       B : array<f32>;
+@group(0) @binding(2) var<storage, read_write> C : array<f32>;
+@group(0) @binding(3) var<uniform>             d : Dims;
+
+const TS : u32 = 16u;
+var<workgroup> tileA : array<f32, 256>;
+var<workgroup> tileB : array<f32, 256>;
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) gid : vec3<u32>,
+        @builtin(local_invocation_id)  lid : vec3<u32>) {
+  let n = d.n;
+  let row = gid.y;
+  let col = gid.x;
+  var acc : f32 = 0.0;
+  let tiles = (n + TS - 1u) / TS;
+  for (var t : u32 = 0u; t < tiles; t = t + 1u) {
+    let aCol = t * TS + lid.x;
+    let bRow = t * TS + lid.y;
+    tileA[lid.y * TS + lid.x] = select(0.0, A[row * n + aCol], row < n && aCol < n);
+    tileB[lid.y * TS + lid.x] = select(0.0, B[bRow * n + col], col < n && bRow < n);
+    workgroupBarrier();
+    for (var k : u32 = 0u; k < TS; k = k + 1u) {
+      acc = acc + tileA[lid.y * TS + k] * tileB[k * TS + lid.x];
+    }
+    workgroupBarrier();
+  }
+  if (row < n && col < n) { C[row * n + col] = acc; }
+}`;
+
+async function gpuSetup(N) {
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) throw new Error('no WebGPU adapter');
+  const device = await adapter.requestDevice();
+  const bytes = N * N * 4;
+
+  const mk = usage => device.createBuffer({ size: bytes, usage });
+  const U = GPUBufferUsage;
+  const bufA = mk(U.STORAGE | U.COPY_DST);
+  const bufB = mk(U.STORAGE | U.COPY_DST);
+  const bufC = device.createBuffer({ size: bytes, usage: U.STORAGE | U.COPY_SRC });
+  const read = device.createBuffer({ size: bytes, usage: U.COPY_DST | U.MAP_READ });
+  const dims = device.createBuffer({ size: 16, usage: U.UNIFORM | U.COPY_DST });
+
+  const host = new Float32Array(N * N);
+  for (let i = 0; i < host.length; i++) host[i] = (i % 17) * 0.0625 - 0.5;
+  device.queue.writeBuffer(bufA, 0, host);
+  device.queue.writeBuffer(bufB, 0, host);
+  device.queue.writeBuffer(dims, 0, new Uint32Array([N, 0, 0, 0]));
+
+  const pipeline = device.createComputePipeline({
+    layout: 'auto',
+    compute: { module: device.createShaderModule({ code: WGSL }), entryPoint: 'main' },
+  });
+  const bind = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: bufA } },
+      { binding: 1, resource: { buffer: bufB } },
+      { binding: 2, resource: { buffer: bufC } },
+      { binding: 3, resource: { buffer: dims } },
+    ],
+  });
+  return { device, pipeline, bind, bufC, read, N, bytes };
+}
+
+async function gpuDispatch(ctx) {
+  const { device, pipeline, bind, N } = ctx;
+  const groups = Math.ceil(N / 16);
+  const enc = device.createCommandEncoder();
+  const pass = enc.beginComputePass();
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bind);
+  pass.dispatchWorkgroups(groups, groups);
+  pass.end();
+  device.queue.submit([enc.finish()]);
+  // onSubmittedWorkDone is the only portable way to time GPU work from JS;
+  // timestamp-query is gated behind a feature flag on most configurations.
+  await device.queue.onSubmittedWorkDone();
+}
+
+// Read back one element so the compiler cannot elide the dispatch, and so we
+// have a correctness signal rather than trusting a timing number alone.
+async function gpuVerify(ctx) {
+  const { device, bufC, read, bytes, N } = ctx;
+  const enc = device.createCommandEncoder();
+  enc.copyBufferToBuffer(bufC, 0, read, 0, bytes);
+  device.queue.submit([enc.finish()]);
+  await read.mapAsync(GPUMapMode.READ);
+  const out = new Float32Array(read.getMappedRange().slice(0));
+  read.unmap();
+  // Recompute C[0][0] on the CPU from the same generator.
+  let expect = 0;
+  for (let k = 0; k < N; k++) expect += ((k % 17) * 0.0625 - 0.5) * ((k * N % 17) * 0.0625 - 0.5);
+  const got = out[0];
+  const rel = Math.abs(got - expect) / Math.max(1e-6, Math.abs(expect));
+  return { ok: rel < 1e-3, got, expect, rel };
+}
+
+// ------------------------------------------------------------- duty cycling
+// Runs `fn` for a burst, then idles so that busy/(busy+idle) == duty. This is
+// the precursor to the M1 resource governor: it establishes what a given share
+// actually delivers, which is exactly the sigma axis of the break-even model.
+async function timedUnderDuty(fn, duty, reps, onProgress) {
+  const samples = [];
+  for (let r = 0; r < reps; r++) {
+    const t0 = performance.now();
+    await fn();
+    const busy = performance.now() - t0;
+    samples.push(busy);
+    if (duty < 1.0) {
+      const idle = busy * (1 / duty - 1);
+      await new Promise(res => setTimeout(res, Math.min(idle, 2000)));
+    }
+    onProgress?.((r + 1) / reps);
+  }
+  samples.sort((a, b) => a - b);
+  return { median_ms: samples[Math.floor(samples.length / 2)],
+           min_ms: samples[0], max_ms: samples[samples.length - 1], samples };
+}
+
+const gflops = (N, ms) => (2 * N ** 3) / (ms / 1000) / 1e9;
+
+// -------------------------------------------------------------- sustained
+/**
+ * Run continuously for `seconds`, bucketing throughput over time.
+ *
+ * A short rep-based run cannot measure sustained throughput. Seven dispatches
+ * at N=1024 is ~200 ms of GPU work — the clock has barely begun to drop, so
+ * the result reflects turbo rather than what a minutes-long session would
+ * actually get. Every sweep so far decayed monotonically right up to the last
+ * sample, which is the signature of a run that stopped too early.
+ *
+ * Bucketing exposes the shape rather than collapsing it to one number, so the
+ * plateau (if any) is visible and can be reported instead of guessed at.
+ */
+async function runSustained(fn, N, seconds, onProgress, bucketMs = 2000) {
+  const t0 = performance.now();
+  const endAt = t0 + seconds * 1000;
+  const buckets = [];
+  let bStart = t0, bDispatch = 0;
+
+  while (performance.now() < endAt) {
+    await fn();
+    bDispatch++;
+    const now = performance.now();
+    if (now - bStart >= bucketMs) {
+      buckets.push({
+        t_s: +((bStart - t0) / 1000).toFixed(2),
+        dispatches: bDispatch,
+        gflops: +((bDispatch * 2 * N ** 3) / ((now - bStart) / 1000) / 1e9).toFixed(2),
+      });
+      bStart = now; bDispatch = 0;
+      onProgress?.((now - t0) / (seconds * 1000));
+    }
+  }
+  return { buckets, elapsed_s: (performance.now() - t0) / 1000 };
+}
+
+/**
+ * Summarise a sustained run using a trend fit, not a spread threshold.
+ *
+ * An earlier version flagged "not plateaued" whenever the last third of
+ * buckets spread by more than 5%, which conflates two different things:
+ * a device that is genuinely still cooling/throttling down, and a device
+ * that is flat but noisy because each ~2s bucket catches a different,
+ * essentially random number of in-flight dispatches at its boundary. On a
+ * 120s N=1024 run that noise alone produced an 8-16% bucket-to-bucket spread
+ * with ZERO real trend (OLS slope was +2.4%/min -- indistinguishable from
+ * flat, and if anything still rising slightly). The spread threshold called
+ * that "not plateaued," which is the wrong diagnosis and would make every
+ * future run doubt a perfectly good number.
+ *
+ * Ordinary least squares against elapsed time answers the actual question:
+ * is throughput trending, and by how much? The first ~15s (roughly the first
+ * quarter of the tail window, capped) is excluded from the fit as pipeline
+ * warmup -- shader compilation settling, caches filling -- which is a
+ * one-time cost, not part of the sustained rate.
+ */
+function summariseSustained(buckets) {
+  if (buckets.length < 6) return null;
+  const g = buckets.map((b) => b.gflops);
+  const t = buckets.map((b) => b.t_s);
+
+  const warmupN = Math.min(8, Math.floor(buckets.length / 4));
+  const tailT = t.slice(warmupN), tailG = g.slice(warmupN);
+
+  const n = tailT.length;
+  const mT = tailT.reduce((a, b) => a + b, 0) / n;
+  const mG = tailG.reduce((a, b) => a + b, 0) / n;
+  const sTT = tailT.reduce((s, x) => s + (x - mT) ** 2, 0);
+  const sTG = tailT.reduce((s, x, i) => s + (x - mT) * (tailG[i] - mG), 0);
+  const slope = sTT > 0 ? sTG / sTT : 0;              // GFLOPS / second
+  const steady = mG;                                   // tail mean, the OLS intercept at t=mT
+  const variance = tailG.reduce((s, x) => s + (x - mG) ** 2, 0) / n;
+  const stdev = Math.sqrt(variance);
+  const slopePctPerMin = steady > 0 ? (slope * 60 / steady) * 100 : 0;
+
+  let trend = 'plateaued';
+  if (slopePctPerMin > 2) trend = 'rising';
+  else if (slopePctPerMin < -2) trend = 'falling';
+
+  return {
+    peak: Math.max(...g),
+    first: g[0],
+    steady: +steady.toFixed(2),
+    stdev: +stdev.toFixed(2),
+    cv_pct: +(stdev / steady * 100).toFixed(1),
+    slope_pct_per_min: +slopePctPerMin.toFixed(2),
+    trend,
+    // "plateaued" kept for backward compatibility with callers/consumers;
+    // now means "trend is flat", not "spread is small".
+    plateaued: trend === 'plateaued',
+    warmup_buckets_excluded: warmupN,
+    buckets_n: buckets.length,
+  };
+}
+
+// ------------------------------------------------------------------- driver
+let lastPayload = null;
+
+async function run() {
+  const N = +$('size').value, duty = +$('duty').value, reps = +$('reps').value;
+  const mode = $('mode').value;
+  const sustainedS = mode === 'reps' ? 0 : +mode;
+  $('run').disabled = true; $('copy').disabled = true;
+  $('prog').style.width = '0%';
+
+  const dev = await deviceInfo();
+  renderDevice(dev);
+  const results = {};
+  let sustained = null;
+
+  if (!sustainedS) {
+    // --- CPU (quick mode only; a sustained CPU run at N=1024 would spend
+    //     minutes producing a handful of buckets)
+    $('status').textContent = 'CPU path…';
+    const A = new Float32Array(N * N), B = new Float32Array(N * N), C = new Float32Array(N * N);
+    for (let i = 0; i < A.length; i++) { A[i] = (i % 17) * 0.0625 - 0.5; B[i] = A[i]; }
+    cpuMatmul(Math.min(N, 128), A, B, C);          // warmup / JIT
+    const cpu = await timedUnderDuty(async () => cpuMatmul(N, A, B, C), duty, reps,
+                                     p => $('prog').style.width = (p * 45) + '%');
+    results.cpu = { path: 'js-typed-array', ...cpu, gflops: gflops(N, cpu.median_ms) };
+  }
+
+  // --- GPU
+  if (dev.webgpu) {
+    $('status').textContent = sustainedS ? `WebGPU sustained ${sustainedS}s…` : 'WebGPU path…';
+    try {
+      const ctx = await gpuSetup(N);
+      await gpuDispatch(ctx);                       // warmup / shader compile
+      const check = await gpuVerify(ctx);
+
+      if (sustainedS) {
+        const run = await runSustained(() => gpuDispatch(ctx), N, sustainedS,
+                                       p => $('prog').style.width = (p * 100) + '%');
+        sustained = { ...run, summary: summariseSustained(run.buckets) };
+        // The steady figure is what the economic model wants -- not the peak,
+        // and not a median that lands mid-decay.
+        results.gpu = {
+          path: 'webgpu-wgsl',
+          gflops: sustained.summary?.steady ?? null,
+          correct: check.ok, rel_error: check.rel,
+          statistic: 'sustained-steady',
+        };
+      } else {
+        const gpu = await timedUnderDuty(() => gpuDispatch(ctx), duty, reps,
+                                         p => $('prog').style.width = (45 + p * 55) + '%');
+        results.gpu = { path: 'webgpu-wgsl', ...gpu, gflops: gflops(N, gpu.median_ms),
+                        correct: check.ok, rel_error: check.rel, statistic: 'median' };
+      }
+      ctx.device.destroy?.();
+    } catch (e) {
+      results.gpu = { path: 'webgpu-wgsl', error: String(e) };
+    }
+  } else {
+    results.gpu = { path: 'webgpu-wgsl', error: 'WebGPU unavailable' };
+  }
+
+  const after = await deviceInfo();
+  $('prog').style.width = '100%';
+  $('status').textContent = 'done';
+
+  lastPayload = {
+    schema: 'zkpoc.device-probe/1',
+    captured_at: new Date().toISOString(),
+    config: { matrix_n: N, duty_cycle: duty, reps, mode, sustained_s: sustainedS || null },
+    device: dev,
+    battery_after: after.battery,
+    results,
+    ...(sustained ? { sustained } : {}),
+    note: 'cpu row is a JS lower bound, not WASM SIMD; see M1',
+  };
+
+  renderResults(N, duty, results, dev, after, sustained);
+  $('json').textContent = JSON.stringify(lastPayload, null, 2);
+  $('json').classList.remove('mut');
+  $('run').disabled = false; $('copy').disabled = false;
+}
+
+function renderResults(N, duty, res, before, after, sustained) {
+  const drain = (before.battery && after.battery && !before.battery.charging)
+    ? (before.battery.level - after.battery.level) * 100 : null;
+
+  const rows = [];
+  const push = (label, r) => {
+    if (!r) return;
+    if (r.error) { rows.push([label, '—', '—', `<span class="warn">${r.error}</span>`]); return; }
+    rows.push([label, fmt(r.gflops, 2) + ' GFLOPS',
+      r.median_ms !== undefined ? fmt(r.median_ms, 1) + ' ms' : (r.statistic ?? '—'),
+      r.correct === false ? '<span class="warn">FAILED verification</span>'
+        : r.correct === true ? `verified (rel err ${r.rel_error.toExponential(1)})` : '—']);
+  };
+  push('CPU (JS typed array)', res.cpu);
+  push('GPU (WebGPU / WGSL)', res.gpu);
+
+  let html = '<tr><th>path</th><th>achievable F(d)</th><th>median / stat</th><th>check</th></tr>';
+  html += rows.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td>
+                         <td class="n">${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+  html += `<tr><td class="mut">config</td><td colspan="3" class="mut">
+           N=${N}, duty=${(duty * 100).toFixed(0)}%, 2N³=${(2 * N ** 3 / 1e9).toFixed(2)} GFLOP/rep</td></tr>`;
+  html += `<tr><td class="mut">battery drop</td><td colspan="3" class="mut">${
+    drain === null ? 'not measurable in-browser — use host-side RAPL/powermetrics'
+                   : fmt(drain, 2) + ' % over the run'}</td></tr>`;
+
+  if (sustained?.summary) {
+    const s = sustained.summary;
+    const trendMsg = {
+      plateaued: `<span class="ok">plateaued (trend ${s.slope_pct_per_min >= 0 ? '+' : ''}${s.slope_pct_per_min}%/min, within noise) — steady value is converged</span>`,
+      rising:    `<span class="warn">still RISING (+${s.slope_pct_per_min}%/min) — steady value is a lower bound; run longer to find the ceiling</span>`,
+      falling:   `<span class="warn">still FALLING (${s.slope_pct_per_min}%/min) — steady value is an upper bound; run longer or check thermals</span>`,
+    }[s.trend];
+    html += `<tr><td class="mut">sustained</td><td colspan="3">
+      peak <b>${fmt(s.peak, 1)}</b> → steady <b>${fmt(s.steady, 1)}</b> ± ${fmt(s.stdev, 1)} GFLOPS
+      (CV ${s.cv_pct}%, ${s.buckets_n} buckets over ${fmt(sustained.elapsed_s, 0)} s,
+      first ${s.warmup_buckets_excluded} excluded as warmup)<br>
+      ${trendMsg}
+      </td></tr>`;
+    html += `<tr><td class="mut">decay curve</td><td colspan="3" class="mut" style="font-size:11px">`
+          + sustained.buckets.map(b => `${b.t_s}s:${b.gflops}`).join('  ')
+          + `</td></tr>`;
+  }
+  $('res').innerHTML = html;
+}
+
+$('run').addEventListener('click', () => run().catch(e => {
+  $('status').innerHTML = `<span class="warn">${String(e)}</span>`;
+  $('run').disabled = false;
+}));
+$('copy').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(JSON.stringify(lastPayload, null, 2));
+  $('copy').textContent = 'Copied';
+  setTimeout(() => $('copy').textContent = 'Copy JSON', 1200);
+});
+
+deviceInfo().then(renderDevice);
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+{
+  "schema": "zkpoc.device-sweep/1",
+  "tier": "laptop-igpu",
+  "captured_at": "2026-08-03T05:59:11Z",
+  "source": "bench/device/probe.html, three runs at N=256/512/1024, duty 100%, reps 7",
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "cores": 8,
+    "memory_gb": 16,
+    "webgpu": true,
+    "adapter": { "vendor": "intel", "architecture": "gen-12lp" },
+    "limits": {
+      "maxComputeWorkgroupStorageSize": 32768,
+      "maxBufferSize": 2147483648
+    },
+    "battery_at_start": 0.34,
+    "charging": false
+  },
+  "watts_full": null,
+  "watts_note": "NOT MEASURED. Browsers expose no power draw. Battery fell 1% across the N=1024 run but total-system draw is not marginal draw. Needs host-side RAPL or Intel Power Gadget before any number here is quotable.",
+  "points": [
+    {
+      "matrix_n": 256,
+      "gflop_per_rep": 0.033554432,
+      "gpu": {
+        "samples_ms": [3.2, 3.3, 3.8, 4.3, 4.6, 5.1, 7.0],
+        "median_ms": 4.3,
+        "correct": true
+      },
+      "cpu": {
+        "samples_ms": [45.4, 48.1, 53.2, 57.3, 58.3, 94.5, 102.6],
+        "median_ms": 57.3
+      },
+      "battery": [0.34, 0.34]
+    },
+    {
+      "matrix_n": 512,
+      "gflop_per_rep": 0.268435456,
+      "gpu": {
+        "samples_ms": [5.8, 6.3, 6.4, 7.0, 7.8, 8.8, 10.8],
+        "median_ms": 7.0,
+        "correct": true
+      },
+      "cpu": {
+        "samples_ms": [408.9, 425.1, 444.9, 462.2, 533.9, 703.7, 706.7],
+        "median_ms": 462.2
+      },
+      "battery": [0.33, 0.33]
+    },
+    {
+      "matrix_n": 1024,
+      "gflop_per_rep": 2.147483648,
+      "gpu": {
+        "samples_ms": [20.9, 24.2, 25.5, 27.2, 27.3, 27.4, 28.5],
+        "median_ms": 27.2,
+        "correct": true,
+        "rel_error": 0.0
+      },
+      "cpu": {
+        "samples_ms": [3604.2, 3879.6, 4886.4, 7350.9, 7506.8, 7523.5, 7577.0],
+        "median_ms": 7350.9
+      },
+      "battery": [0.32, 0.31]
+    }
+  ]
+}

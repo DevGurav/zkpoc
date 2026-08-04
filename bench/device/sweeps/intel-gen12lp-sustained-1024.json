@@ -1,0 +1,43 @@
+{
+  "schema": "zkpoc.device-sweep-sustained/1",
+  "tier": "laptop-igpu",
+  "captured_at": "2026-08-03T15:35:49.225Z",
+  "source": "bench/device/probe.html, sustained mode, N=1024, 120s",
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "cores": 8,
+    "memory_gb": 16,
+    "webgpu": true,
+    "adapter": { "vendor": "intel", "architecture": "gen-12lp" },
+    "battery_at_start": 0.34,
+    "battery_at_end": 0.31,
+    "charging": false
+  },
+  "config": { "matrix_n": 1024, "duty_cycle": 1.0, "sustained_s": 120 },
+  "raw_result": {
+    "gflops_reported_by_probe": 108.15,
+    "note": "probe's on-page summary at capture time; superseded below by an OLS trend fit that excludes warmup, computed offline against the same bucket array"
+  },
+  "buckets_gflops": [
+    57.52, 88.79, 101.75, 102.41, 104.57, 104.33, 107.4, 109.24, 109.6, 108.23,
+    97.29, 95.27, 98.35, 110.43, 103.06, 102.33, 103.99, 103.76, 101.35, 101.97,
+    106.61, 109.18, 110.04, 111.58, 110.41, 110.67, 104.54, 107.21, 112.97, 109.42,
+    108.77, 110.45, 107.04, 110.57, 110.36, 110.62, 113.31, 109.74, 100.54, 102.29,
+    108.19, 110.81, 111.41, 111.93, 110.37, 106.72, 112.11, 107.18, 105.41, 108.47,
+    105.43, 107.64, 108.23, 107.97, 108.15, 102.82, 106.23, 110.8, 107
+  ],
+  "bucket_width_s": 2.0,
+  "offline_analysis": {
+    "method": "OLS trend fit vs elapsed time, first 8 buckets (~16s) excluded as pipeline warmup",
+    "tail_n_buckets": 51,
+    "tail_mean_gflops": 107.23,
+    "tail_stdev_gflops": 4.08,
+    "tail_cv_pct": 3.8,
+    "ols_slope_gflops_per_min": 2.62,
+    "ols_slope_pct_per_min": 2.44,
+    "verdict": "essentially flat (+2.4%/min is within sampling noise, not a real trend); the earlier spread-based plateau check flagged this run as 'not plateaued' at 8.76% tail spread, which conflated per-bucket dispatch-count jitter with genuine thermal decay -- fixed in probe.html to use this same OLS method going forward",
+    "note": "this also falsifies the hypothesis in docs/device-tiers.md that this tier shares a power budget with the CPU and throttles down over a sustained run: over 120s at N=1024 it does not decline. The earlier 75.4 GFLOPS figure (7-rep quick sweep) was warmup contamination in a run too short to get past it, not a measurement of steady state."
+  },
+  "recommended_f_d_gflops": 107.2
+}
