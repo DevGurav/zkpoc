@@ -13,6 +13,11 @@ ZK-PoC asks whether metered, consented, cryptographically verified spare
 compute can be that third rail, and measures the answer rather than asserting
 it.
 
+**[Live demo](https://devgurav.github.io/zkpoc/demo/)** ·
+[`@zkpoc/ccm`](https://www.npmjs.com/package/@zkpoc/ccm) ·
+[`@zkpoc/worker`](https://www.npmjs.com/package/@zkpoc/worker) ·
+[`@zkpoc/broker`](https://www.npmjs.com/package/@zkpoc/broker)
+
 ---
 
 ## Two results, both reproducible in under a minute
@@ -192,7 +197,7 @@ applies in full and no anti-abuse claim is made for that mode.
 | **M1** Worker + resource governor + Compute Consent Manifest | done; 34 tests passing |
 | **M2** Broker, tiered verification, useful-PoW challenge protocol | done; 161 tests, [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) finding reported |
 | **M3** ZK layer — in-browser Groth16, settlement-side zkVM | Track 1 done, Track 2 environment-blocked ([ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md), [ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md)) |
-| **M4** Demo, SDK, W3C/WICG explainer | packages + explainer + dual-use evaluation done; deploy/publish/outreach deliberately not sent |
+| **M4** Demo, SDK, W3C/WICG explainer | done and deployed — demo hosted, 3 packages published to npm |
 
 This table is a summary. [docs/roadmap.md](docs/roadmap.md) is the source of
 truth — exit criteria, what shipped, and what's still open per milestone.
@@ -375,13 +380,19 @@ demonstrates the actual defense: the manifest/code-binding verification
 path, already built, already tested.
 [ADR-0015](docs/adr/0015-dual-use-detectors-environment-blocked.md).
 
-**Stated plainly, two things in the original M4 scope were deliberately not
-done:** the demo isn't hosted (still local-only via `python -m http.server`;
-`.nojekyll` and a root redirect are staged for a future GitHub Pages
-deploy), and neither package is published to npm. Both are one-way,
-externally-visible actions outside what this project automates on its own.
-Outreach itself is handled privately by the maintainer, not tracked in this
-repo.
+**It's deployed.** The demo is live at
+[devgurav.github.io/zkpoc/demo/](https://devgurav.github.io/zkpoc/demo/)
+via GitHub Pages, and `@zkpoc/ccm`, `@zkpoc/worker`, and `@zkpoc/broker` are
+published to npm — `npm install @zkpoc/ccm` genuinely works in a fresh
+project, verified with a real install and a full build→sign→verify round
+trip outside this repo. `@zkpoc/sdk` and `@zkpoc/challenge` stay unpublished
+on purpose: both import their sibling packages by relative path (only
+works inside this monorepo), and fixing that for real npm compatibility
+would mean those two packages — and this repo's own root `npm test` —
+start requiring `npm install` before anything runs, which wasn't worth
+trading away for a five-line wrapper that's easy to just copy (their own
+READMEs show the pattern). Outreach is handled privately by the
+maintainer, not tracked in this repo.
 
 ## Documentation
 

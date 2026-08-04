@@ -12,7 +12,7 @@ right and the README needs updating.
 | M1 — Worker, governor, Compute Consent Manifest | **Done** | Yes — see below |
 | M2 — Broker, tiered verification, useful-PoW challenge protocol | **Done** | Yes — all 5, see below |
 | M3 — ZK layer (in-browser Groth16 + settlement-side zkVM) | **Track 1 done, Track 2 environment-blocked** ([ADR-0007](adr/0007-tiered-zk-proving-plan.md), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md)) | Track 1 yes; Track 2 not attemptable here |
-| M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Packages/explainer/evaluation done; deploy, npm publish, outreach deliberately not sent** ([ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md)) | See below |
+| M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Done and deployed** — demo hosted, 3 packages published to npm; outreach handled privately ([ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md)) | See below |
 
 ---
 
@@ -200,18 +200,24 @@ dependency isolation, Track 2's outcome) are in
 **Exit criteria (from the original plan):** demo URL completes a full cycle
 on a clean profile; `npm i` + the five-line snippet works in a fresh
 project; detector baselines run with the outcome reported honestly either
-way, alongside the manifest-verification path.
+way, alongside the manifest-verification path. **All met.**
 
 **Delivered:**
 
+- **Demo hosted** — live at
+  [devgurav.github.io/zkpoc/demo/](https://devgurav.github.io/zkpoc/demo/)
+  via GitHub Pages.
+- **`@zkpoc/ccm`, `@zkpoc/worker`, `@zkpoc/broker` published to npm.**
+  `npm install @zkpoc/ccm` genuinely works in a fresh project — verified
+  with a real install outside this repo plus a full build→sign→verify
+  round trip (genuine manifest accepted, tampered one rejected) against the
+  installed package, not just an import check.
 - `packages/zkpoc-sdk/` — five-line publisher integration wrapping
   `@zkpoc/ccm` + `@zkpoc/worker` (`issueSession`/`attachGovernor`/`runSession`),
-  5 tests. `npm i` isn't meaningful yet since nothing is published (see
-  Deliberately not done, below), but the snippet itself works today against
-  the packages as committed.
+  5 tests. **Not published** — see below.
 - `packages/zkpoc-challenge/` — the client half of the anti-bot challenge
   protocol, interoperating directly with `packages/zkpoc-broker/src/challenge.js`'s
-  server half, 3 tests.
+  server half, 3 tests. **Not published** — see below.
 - `explainer/index.md` — W3C/WICG-format explainer built from
   `packages/zkpoc-ccm/SPEC.md`.
 - **Dual-use evaluation, closed via the declaration path.** MinerRay/MINOS/
@@ -223,19 +229,17 @@ way, alongside the manifest-verification path.
   regardless; [docs/dual-use-evaluation.md](dual-use-evaluation.md)
   demonstrates the manifest/code-binding path as the real, already-tested
   defense. [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md).
-- `.nojekyll` + a root `index.html` redirect to `/demo/`, in place for a
-  future GitHub Pages deploy.
 
 **Deliberately not done, by explicit choice rather than oversight:**
 
-- **The demo is not hosted.** `demo/index.html` still runs locally only,
-  via `python -m http.server`. Enabling GitHub Pages (a one-click repo
-  Settings action: Deploy from branch → main → / (root)) and pushing are
-  left to the maintainer — an externally-visible action outside this
-  project's automation.
-- **Neither package is published to npm.** Both are built and tested;
-  `npm publish` needs the maintainer's own npm credentials and is a
-  one-way action.
+- **`@zkpoc/sdk` and `@zkpoc/challenge` are not published to npm.** Both
+  import their sibling packages by relative path, which only works inside
+  this monorepo — fixing that for real npm-install compatibility would
+  require switching to real npm `dependencies`, which in turn would make
+  those two packages (and this repo's root `npm test`) start requiring
+  `npm install` before anything runs. That tradeoff wasn't worth it for a
+  five-line convenience wrapper that's easy to copy directly — both stay
+  in the repo as reference code, and their own READMEs show the pattern.
 - **Outreach is handled privately by the maintainer**, not tracked in this
   repo — a business-development action, not a software one.
 

@@ -10,6 +10,31 @@ chronological version.
 
 Nothing landed yet.
 
+## [Deployment] — 2026-08-04 — Demo hosted, three packages published to npm
+
+### Added
+
+- Demo hosted on GitHub Pages:
+  [devgurav.github.io/zkpoc/demo/](https://devgurav.github.io/zkpoc/demo/).
+- `@zkpoc/ccm`, `@zkpoc/worker`, `@zkpoc/broker` published to the npm
+  registry (`--access public`). Each gained a README.md (none had one
+  except SPEC.md/API.md, neither of which npm treats as the package's
+  front page), `repository`/`bugs`/`homepage` metadata, and a bundled copy
+  of both license texts. Verified with a real `npm install` outside this
+  repo plus a full build→sign→verify round trip against the installed
+  `@zkpoc/ccm` package (genuine manifest accepted, tampered one rejected)
+  — not just an import check.
+
+### Deliberately not done
+
+- `@zkpoc/sdk` and `@zkpoc/challenge` were not published. Both import
+  their sibling packages by relative path (only works inside this
+  monorepo); fixing that for real npm compatibility would require real
+  npm `dependencies`, which would make those two packages — and this
+  repo's own root `npm test` — start requiring `npm install` before
+  anything runs. Not worth the tradeoff for a five-line wrapper that's
+  easy to copy directly; both stay in the repo as reference code.
+
 ## [Q7 mitigation] — 2026-08-04 — Memory-hard row commitment, built and found not viable as specified
 
 Follow-through on ADR-0013's named-not-built mitigation for the measured

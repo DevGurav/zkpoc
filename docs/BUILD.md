@@ -361,7 +361,7 @@ and a tampered proof point are each independently rejected. Track 2's
 overhead table is **not produced** — environment-blocked, see above; Q2
 below stays open rather than answered with a guess.
 
-### M4 — Demo, SDK, standards, dual-use evaluation — packages/explainer/evaluation DONE, deploy/publish/outreach deliberately not sent
+### M4 — Demo, SDK, standards, dual-use evaluation — DEPLOYED (demo hosted, packages published); outreach stays private
 
 - **`@zkpoc/sdk` — done.** Wraps `@zkpoc/ccm` + `@zkpoc/worker` into a
   five-line publisher integration (`packages/zkpoc-sdk/`, 5 tests).
@@ -386,14 +386,24 @@ below stays open rather than answered with a guess.
 - **Outreach — handled privately by the maintainer.** A business-development
   action outside this project's automation, and deliberately not tracked in
   this repo.
-- **Hosted one-click demo — not deployed.** `.nojekyll` and a root
-  redirect to `/demo/` are in place for a future GitHub Pages deploy
-  (`Settings → Pages → Deploy from branch → main → / (root)`), but nothing
-  has been pushed or enabled — `demo/index.html` still runs locally only,
-  via `python -m http.server`.
-- **npm publish — not done.** Both packages are built and tested; `npm
-  publish` was deliberately not run (would need the maintainer's npm
-  credentials and is a one-way, externally-visible action).
+- **Hosted one-click demo — done.** Live at
+  [devgurav.github.io/zkpoc/demo/](https://devgurav.github.io/zkpoc/demo/)
+  via GitHub Pages (`Settings → Pages → Deploy from branch → main → / (root)`).
+- **npm publish — done, for the packages that were actually publish-ready.**
+  `@zkpoc/ccm`, `@zkpoc/worker`, and `@zkpoc/broker` are live on the npm
+  registry — no cross-package dependencies, so no changes were needed
+  beyond adding a README/license/repository metadata to each. Verified with
+  a real `npm install` outside this repo plus a full build→sign→verify
+  round trip against the installed package (genuine manifest accepted,
+  tampered one rejected). `@zkpoc/sdk` and `@zkpoc/challenge` were
+  deliberately **not** published: they import their sibling packages by
+  relative path, which only works inside this monorepo — fixing that for
+  real npm-install compatibility would mean those two packages (and by
+  extension this repo's root `npm test`) start requiring `npm install`
+  before anything runs, cracking the zero-install guarantee for a
+  five-line convenience wrapper that's easy to just copy instead. They
+  stay in the repo as reference code; their own READMEs already show the
+  pattern to copy.
 
 ---
 

@@ -52,7 +52,7 @@ flowchart TB
     subgraph Planned["Not done — blocked or deliberately deferred"]
         ZkVM["Track 2: RISC Zero/SP1\nsettlement-side measurement\n(environment-blocked, ADR-0014)"]
         Detectors["MinerRay/MINOS/Delay-CJ\ndetector baselines\n(no installable distribution, ADR-0015)"]
-        Hosted["Hosted demo, npm publish\n(deliberately not pushed/published)"]
+        UnpubPkgs["sdk/challenge npm publish\n(relative-path deps; kept as\nreference code instead)"]
     end
 
     SDK -->|"1. request manifest"| Issue
@@ -87,11 +87,12 @@ flowchart TB
 | `contracts/` | Generated Solidity Groth16 verifier | **Done** — M3 Track 1 |
 | `zk/` | Isolated circom2/snarkjs/Hardhat toolchain (build + test), not in root workspaces | **Done** — M3 Track 1, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
 | Track 2 (settlement-side zkVM) | RISC Zero/SP1 proving-overhead measurement | **Blocked** — no Rust toolchain in this environment, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
-| `packages/zkpoc-sdk/` | Publisher integration — issue, verify, run a governed session | **Done** — M4, 5 tests |
-| `packages/zkpoc-challenge/` | Anti-bot widget — client-side challenge solver | **Done** — M4, 3 tests |
+| `packages/zkpoc-sdk/` | Publisher integration — issue, verify, run a governed session | **Done**, not published — M4, 5 tests, reference code (relative-path deps) |
+| `packages/zkpoc-challenge/` | Anti-bot widget — client-side challenge solver | **Done**, not published — M4, 3 tests, reference code (relative-path deps) |
 | `explainer/` | W3C/WICG Compute Consent Manifest explainer | **Done** — M4, experimental/project-local |
 | Dual-use detector baselines (MinerRay/MINOS/Delay-CJ) | Run against this system, report the outcome | **Blocked** — no installable distribution, [ADR-0015](adr/0015-dual-use-detectors-environment-blocked.md) |
-| Hosted demo, npm publish | Public deploy of `demo/`, `@zkpoc/sdk` + `@zkpoc/challenge` on the registry | **Deliberately not done** — externally-visible actions left to the maintainer |
+| Hosted demo | `demo/` on GitHub Pages | **Done** — live at [devgurav.github.io/zkpoc/demo/](https://devgurav.github.io/zkpoc/demo/) |
+| npm packages | `@zkpoc/ccm`, `@zkpoc/worker`, `@zkpoc/broker` on the registry | **Done** — verified with a real install + functional round trip outside this repo |
 
 See [roadmap.md](roadmap.md) for the milestone breakdown this table summarises.
 
