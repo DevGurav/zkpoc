@@ -13,11 +13,16 @@ this project's own prior design, not an external source. A fourth (0013) is a
 different case worth distinguishing: nothing was wrong, a risk named before
 any code existed was measured and confirmed exactly as predicted, and the
 finding is recorded as-is rather than held back until a fix was attached to
-it. Both cases are the actual value of an ADR log on a project like this one:
-not just recording what was decided, but leaving a trail of what was tried,
-what broke it or confirmed it, and what came next — which is exactly the
-material a thesis defense or a code review will ask for, and exactly the
-material that is easiest to lose once the code moves on.
+it. A fifth (0016) is a third case again: the named fix for 0013 was actually
+built, tested, and measured — and the measurement found it structurally too
+costly to deploy as specified, which is recorded as real progress on the
+question (a ruled-out approach, not a wasted one) rather than quietly dropped
+for not panning out. All three are the actual value of an ADR log on a
+project like this one: not just recording what was decided, but leaving a
+trail of what was tried, what broke it, confirmed it, or didn't pan out, and
+what came next — which is exactly the material a thesis defense or a code
+review will ask for, and exactly the material that is easiest to lose once
+the code moves on.
 
 ## Index
 
@@ -38,6 +43,7 @@ material that is easiest to lose once the code moves on.
 | [0013](0013-measured-attacker-advantage-exceeds-memory-hard-control.md) | Measured attacker-advantage ratio exceeds the memory-hard control — reported, mitigation deferred | Accepted |
 | [0014](0014-m3-track1-toolchain-and-track2-blocked.md) | M3 Track 1 toolchain (circom2/snarkjs/Hardhat 2), dependency isolation, Track 2 reported environment-blocked | Accepted |
 | [0015](0015-dual-use-detectors-environment-blocked.md) | M4 dual-use detector baselines (MinerRay/MINOS/Delay-CJ) reported environment-blocked, not run | Accepted |
+| [0016](0016-memory-hard-commitment-mitigation.md) | Q7's memory-hard row commitment built and measured — structurally too costly at per-row granularity, not deployed | Accepted |
 
 ## Adding one
 

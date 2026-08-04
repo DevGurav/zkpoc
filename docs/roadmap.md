@@ -132,8 +132,14 @@ this section is a milestone-level summary of it.
   literature-cited memory-hard control (two independent published sources,
   a decade apart). Reported directly, not softened —
   [ADR-0013](adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
-  A mitigation is named (mix a memory-hard KDF into the row commitment) but
-  not yet designed or built — tracked as Q7 in BUILD.md §5.
+  A mitigation (mix a memory-hard KDF into the row commitment) was
+  subsequently built, tested, and measured
+  (`bench/memory_hard_overhead.js`) — found structurally too costly to
+  deploy at per-row granularity (cost scales linearly with shard size; no
+  buffer size tested is both plausibly GPU-resistant and practically fast),
+  not deployed as a default, and a cheaper alternative direction named but
+  not built. [ADR-0016](adr/0016-memory-hard-commitment-mitigation.md), Q7/Q8
+  in BUILD.md §5.
 - **Adversarial harness** (`test/adversarial.test.js`) — closes the
   remaining two exit criteria together: 24 distinct simulated clients across
   8 shards, garbage and replay caught at exactly 100% (deterministic gate
@@ -148,8 +154,9 @@ this section is a milestone-level summary of it.
 - Challenge execution is tested headlessly via the JS reference path only —
   no real browser/WebGPU walkthrough yet (`docs/testing-strategy.md`'s
   manual-vs-automated distinction).
-- The attacker-advantage finding (ADR-0013) has a named mitigation, not a
-  built one.
+- The attacker-advantage finding (ADR-0013)'s named mitigation was built
+  and measured, and found not practically deployable as specified
+  (ADR-0016) — the gap itself remains open.
 - Publisher SDK + content gate (the secondary barter demo surface) is M4
   scope, not M2's.
 - Five of six device tiers remain unmeasured placeholders (unchanged since

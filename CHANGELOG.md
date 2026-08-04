@@ -10,6 +10,38 @@ chronological version.
 
 Nothing landed yet.
 
+## [Q7 mitigation] — 2026-08-04 — Memory-hard row commitment, built and found not viable as specified
+
+Follow-through on ADR-0013's named-not-built mitigation for the measured
+attacker-advantage finding. Built, tested, and measured; the honest result
+is that it doesn't work at the granularity originally proposed. See
+[ADR-0016](docs/adr/0016-memory-hard-commitment-mitigation.md).
+
+### Added
+
+- `merkle.js#hashRow`: opt-in `memoryHard` option (default `false`, all
+  pre-existing tests unaffected), forwarded through `commitFullResult`,
+  `buildHonestSubmission`, `verifyRowSubmission` (`shard.js`) and
+  `solveChallenge`/`runChallenge` (`packages/zkpoc-challenge/`). 10 new
+  tests across `merkle.test.js`, `challenge.test.js`, and
+  `packages/zkpoc-challenge/test/solve.test.js`.
+- `bench/memory_hard_overhead.js`: measures the real CPU-side cost against
+  real shard sizes (`tiers.js#chooseShardSize` on `LAPTOP_IGPU`), plus a
+  buffer-size sweep.
+
+### Found
+
+- **The mitigation is not practically deployable as specified.** Cost
+  scales linearly with shard size because every row pays an independent
+  memory-hard expansion — at a 2-second-target shard (n≈4736), even a
+  1 KiB buffer (far too small to plausibly resist a GPU) already costs
+  133% of the target duration; a 64 KiB buffer (comparable to typical GPU
+  shared memory, a real resistance argument) costs 256%. No buffer size
+  tested is both plausibly GPU-resistant and practically fast. Not shipped
+  as a default. A cheaper, untested alternative (fold memory-hardness in
+  once per submission instead of once per row) is named as Q8 in
+  `docs/BUILD.md` §5.
+
 ## [M4] — 2026-08-04 — Demo, SDK, standards, dual-use evaluation
 
 Packages, explainer, and dual-use evaluation done. Demo hosting, npm

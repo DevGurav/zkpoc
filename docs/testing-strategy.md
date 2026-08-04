@@ -2,8 +2,11 @@
 
 ## Coverage map
 
-195 automated tests, zero test-runner dependencies (`node --test`, stdlib
+213 automated tests, zero test-runner dependencies (`node --test`, stdlib
 `node:assert/strict`) — deliberate, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+(Separately, `zk/` has its own 4-test Hardhat/Mocha suite, not counted here
+since `zk/` is deliberately outside the root workspaces — see
+[ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md).)
 
 | File | Tests | What it actually verifies |
 | --- | --- | --- |
@@ -11,15 +14,17 @@
 | `packages/zkpoc-ccm/test/demo-flow.test.js` | 5 | The exact flow `demo/index.html` performs, against the **real files on disk** (not fixtures) — including the case that isolates the code-binding check from the signature check (see below) |
 | `packages/zkpoc-worker/test/share-control.test.js` | 6 | The share-control law (`nextIdleMs`) in isolation: convergence, overshoot recovery, peak-share bound, proportionality — as a pure function, with no browser |
 | `packages/zkpoc-broker/test/shard.test.js` | 28 | Deterministic-but-fresh shard inputs, commit-then-challenge submission building and verification, the regression test replaying ADR-0011's original point-sample exploit against the new scheme |
-| `packages/zkpoc-broker/test/merkle.test.js` | 15 | Row hashing/quantization, Merkle tree construction, inclusion proofs, Fiat-Shamir challenge derivation |
+| `packages/zkpoc-broker/test/merkle.test.js` | 21 | Row hashing/quantization, Merkle tree construction, inclusion proofs, Fiat-Shamir challenge derivation, the Q7/ADR-0013 memory-hard commitment option (correctness, not its cost — see `bench/memory_hard_overhead.js`) |
 | `packages/zkpoc-broker/test/tiers.test.js` | 16 | Device-tier shard sizing from measured constants; refusal to size for an unmeasured tier |
 | `packages/zkpoc-broker/test/queue.test.js` | 28 | Lease-based assignment, replica independence across expired leases, retry exhaustion → abandonment, the duplicate-submission rejection-reason bug fix |
 | `packages/zkpoc-broker/test/consensus.test.js` | 19 | Per-submission gate, majority/tie/dispute tally as a pure function against hand-built verdict records |
 | `packages/zkpoc-broker/test/audit.test.js` | 13 | Stake-derived audit rate matches `bench/breakeven.py`'s formula exactly; Fiat-Shamir audit-selection unpredictability |
 | `packages/zkpoc-broker/test/ledger.test.js` | 18 | Stake/earned-balance separation, closed violation-reason enum on `slash()` |
 | `packages/zkpoc-broker/test/dispute-resolution.test.js` | 2 | End-to-end: disputed replicas force a full audit regardless of stake, honest party paid, dishonest one slashed |
-| `packages/zkpoc-broker/test/challenge.test.js` | 13 | Single-submission anti-bot gate, timing reported as a ratio and never auto-denying |
+| `packages/zkpoc-broker/test/challenge.test.js` | 16 | Single-submission anti-bot gate, timing reported as a ratio and never auto-denying, memoryHard mode end to end (admitted when both sides agree, denied on mismatch, tamper detection unweakened) |
 | `packages/zkpoc-broker/test/adversarial.test.js` | 9 | 24 simulated clients across 8 shards exercising garbage/replay/partial-cheat/Sybil/non-participation together, rewarded/slashed through the real ledger |
+| `packages/zkpoc-sdk/test/session.test.js` | 5 | `issueSession`/`attachGovernor`/`runSession` wiring: a well-formed session verifies, a policy violation is reported without touching structure/signature, `runSession` never constructs a `Governor` when verification fails |
+| `packages/zkpoc-challenge/test/solve.test.js` | 4 | `solveChallenge` interoperates with a real `resolveChallenge()` call, is deterministic per shard, rejects a response to the wrong shard, forwards `memoryHard` correctly |
 
 Run everything: `npm test` from the repo root (workspaces-aware).
 Run one package: `npm test --prefix packages/zkpoc-ccm`.

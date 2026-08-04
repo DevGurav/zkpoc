@@ -80,7 +80,7 @@ flowchart TB
 | --- | --- | --- |
 | `packages/zkpoc-ccm/` | Manifest schema, canonicalisation, signing, third-party verification | **Done** — 28 tests |
 | `packages/zkpoc-worker/` | Resource governor, sandboxed shard worker, compute kernels | **Done** — 6 tests |
-| `packages/zkpoc-broker/` | Shard model, tier sizing, queue, consensus, audit, ledger, challenge protocol | **Done** — 161 tests |
+| `packages/zkpoc-broker/` | Shard model, tier sizing, queue, consensus, audit, ledger, challenge protocol | **Done** — 170 tests |
 | `bench/` | Economic model, device measurement, dispatch/power analysis, attacker-advantage measurement | **Done** — M0/M2 |
 | `demo/` | Live meter, tamper panel, revocation demo | **Done** |
 | `circuits/` | Circom circuit for the must-land in-browser proof | **Done** — M3 Track 1 |

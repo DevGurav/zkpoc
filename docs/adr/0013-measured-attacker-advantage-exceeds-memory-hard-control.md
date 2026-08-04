@@ -70,14 +70,17 @@ weight so the result isn't misread in either direction:
 
 ## Consequences
 
-- **A mitigation is named, not built.** BUILD.md's own primary-risk note
-  already points at it: mix a memory-hard component into the shard
+- **A mitigation is named, not built here.** BUILD.md's own primary-risk
+  note already points at it: mix a memory-hard component into the shard
   *commitment* (`merkle.js#hashRow`, ADR-0011) rather than relying on the
   GEMM kernel alone for deterrence — raising the memory-hardness of the
   commitment step without changing the underlying matmul or the useful-work
   claim it sells. Sizing and benchmarking that change is out of scope for
   this measurement and is added to `docs/BUILD.md` §5 as an open question
-  rather than attempted under this ADR.
+  rather than attempted under this ADR. **Follow-through:** it was
+  subsequently built, tested, and measured — and found structurally too
+  costly to deploy at the per-row granularity this note describes; see
+  [ADR-0016](0016-memory-hard-commitment-mitigation.md).
 - **M2.5's exit criterion 3 is satisfied by the measurement itself**, not by
   the ratio coming out favourably — BUILD.md never conditioned "done" on a
   good number, only on the number being real and reported. Scope discipline

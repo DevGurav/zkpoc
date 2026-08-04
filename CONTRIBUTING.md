@@ -34,7 +34,7 @@ See [zk/README.md](zk/README.md) and
 ```sh
 git clone <repo>
 cd zk-poc
-npm test                       # all package tests, 195 total
+npm test                       # all package tests, 213 total
 python bench/tdsc_reproduction.py
 python bench/breakeven.py
 ```

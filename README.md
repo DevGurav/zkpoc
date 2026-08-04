@@ -290,11 +290,17 @@ published sources a decade apart: an 8×RTX5090 rig that was *slower* than a
 single server CPU, and a historical Titan X benchmark). **41×–271× worse**
 than the control, reported directly rather than reframed —
 [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md).
-A mitigation is named (mix a memory-hard KDF into the row commitment) but not
-yet built.
+A mitigation (mix a memory-hard KDF into the row commitment) was built and
+measured, honestly, after the fact — and found **not practically deployable
+as specified**: cost scales linearly with shard size, so no buffer size
+tested is both plausibly GPU-resistant and fast enough not to roughly
+double or triple honest-user wait time. Not shipped as a default; a cheaper
+alternative approach is named, not built —
+[ADR-0016](docs/adr/0016-memory-hard-commitment-mitigation.md),
+`bench/memory_hard_overhead.js`.
 
 ```sh
-npm test --prefix packages/zkpoc-broker   # 161 tests
+npm test --prefix packages/zkpoc-broker   # 170 tests
 python bench/attacker_advantage.py
 ```
 
