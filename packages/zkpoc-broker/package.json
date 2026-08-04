@@ -1,0 +1,25 @@
+{
+  "name": "@zkpoc/broker",
+  "version": "0.1.0",
+  "description": "Shard queue, tier-aware sizing, redundancy consensus and audit sampling for consented browser compute",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./tiers": "./src/tiers.js",
+    "./shard": "./src/shard.js",
+    "./queue": "./src/queue.js",
+    "./merkle": "./src/merkle.js",
+    "./consensus": "./src/consensus.js",
+    "./audit": "./src/audit.js",
+    "./ledger": "./src/ledger.js",
+    "./challenge": "./src/challenge.js"
+  },
+  "files": ["index.js", "src/"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["broker", "verifiable-compute", "proof-of-useful-work", "webgpu"],
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
