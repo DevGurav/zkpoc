@@ -1,0 +1,17 @@
+{
+  "name": "@zkpoc/sdk",
+  "version": "0.1.0",
+  "description": "Publisher integration for consented compute: issue a signed manifest, verify it, run the governed worker session",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": ["index.js", "src/"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["publisher-sdk", "consent", "webgpu", "compute-consent-manifest"],
+  "license": "MIT OR Apache-2.0",
+  "engines": { "node": ">=18" }
+}
