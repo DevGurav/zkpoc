@@ -23,6 +23,9 @@ import { solveChallenge } from './solve.js';
  *                               (whatever the server derives from
  *                               `resolveChallenge()`)
  * @param {string} [o.workerId]
+ * @param {boolean} [o.memoryHard]  forwarded to `solveChallenge` -- must
+ *                                  match the deployment's issuer-side
+ *                                  setting (Q7/ADR-0013)
  * @returns {Promise<{outcome:string, timingRatio:number|null}>}
  */
 export async function runChallenge(o) {
@@ -30,7 +33,7 @@ export async function runChallenge(o) {
 
   const issued = await (await fetch(o.issueUrl)).json();
   const startedAt = performance.now();
-  const result = await solveChallenge(issued.shard, workerId);
+  const result = await solveChallenge(issued.shard, workerId, { memoryHard: o.memoryHard });
   const elapsedMs = performance.now() - startedAt;
 
   const resp = await fetch(o.verifyUrl, {

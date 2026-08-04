@@ -164,3 +164,42 @@ test('issue -> honest solve -> resolve is admitted end to end', async () => {
   const r = await resolveChallenge(shard, response);
   assert.equal(r.outcome, ChallengeOutcome.ADMIT);
 });
+
+// --------------------------------------------------------------------------
+// Memory-hard commitment mode (Q7/ADR-0013 mitigation) end to end
+// --------------------------------------------------------------------------
+// Small buffer here too, for the same reason merkle.test.js's MH_TEST_OPTS
+// is small: this proves the protocol wires memoryHard through correctly
+// end to end, not that the production-sized buffer is fast. See
+// bench/memory_hard_overhead.py for the real cost measurement.
+const MH_OPTS = { memoryHard: true, memoryHardWords: 256, memoryHardRounds: 1 };
+
+test('issue -> honest solve -> resolve is admitted end to end with memoryHard on', async () => {
+  const { shard } = issueChallenge(SMALL_TIER, { targetWallSeconds: 0.02 });
+  const response = await buildHonestSubmission(shard, 'real-visitor', MH_OPTS);
+  const r = await resolveChallenge(shard, response, MH_OPTS);
+  assert.equal(r.outcome, ChallengeOutcome.ADMIT, JSON.stringify(r.gate.failures));
+});
+
+test('a memoryHard submission fails verification if the verifier checks it without memoryHard', async () => {
+  const shard = mkSmallShard();
+  const response = await buildHonestSubmission(shard, 'v1', MH_OPTS);
+  // The commitment itself was built with the memory-hard mix; recomputing
+  // hashRow WITHOUT it must not accidentally agree -- both sides of a real
+  // deployment have to configure this identically, the same way they
+  // already must agree on k. A silent mismatch degrading to "just deny
+  // everyone" would be a much worse failure mode than an explicit one.
+  const r = await resolveChallenge(shard, response, {});
+  assert.equal(r.outcome, ChallengeOutcome.DENY);
+});
+
+test('memoryHard does not weaken the existing tamper/forgery checks', async () => {
+  const shard = mkSmallShard();
+  const response = await buildHonestSubmission(shard, 'v1', MH_OPTS);
+  const tampered = new ShardResult({
+    ...response,
+    rows: response.rows.map((r, i) => (i === 0 ? { ...r, values: r.values.map((v) => v + 1) } : r)),
+  });
+  const r = await resolveChallenge(shard, tampered, MH_OPTS);
+  assert.equal(r.outcome, ChallengeOutcome.DENY);
+});

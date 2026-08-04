@@ -230,15 +230,17 @@ export function challengeRows(shard, root, k = DEFAULT_CHALLENGE_ROWS) {
  * shortcut to a valid root the way there was to a valid point-sample.
  *
  * @param {Shard} shard
+ * @param {object} [o]              forwarded to hashRow -- see its
+ *                                  `memoryHard` option (merkle.js, Q7)
  * @returns {Promise<{root: Uint8Array, layers: Uint8Array[][], rows: Float32Array[]}>}
  */
-export async function commitFullResult(shard) {
+export async function commitFullResult(shard, o = {}) {
   const rows = [];
   const leaves = [];
   for (let i = 0; i < shard.n; i++) {
     const row = shard.rowValues(i);
     rows.push(row);
-    leaves.push(await hashRow(row));
+    leaves.push(await hashRow(row, o));
   }
   const { root, layers } = await buildMerkleTree(leaves);
   return { root, layers, rows };
@@ -299,11 +301,12 @@ export class ShardResult {
  * @param {string} workerId
  * @param {object} [o]
  * @param {number} [o.k]
+ * @param {boolean} [o.memoryHard]   forwarded to hashRow (merkle.js, Q7)
  * @returns {Promise<ShardResult>}
  */
 export async function buildHonestSubmission(shard, workerId, o = {}) {
   const k = o.k ?? DEFAULT_CHALLENGE_ROWS;
-  const { root, layers, rows } = await commitFullResult(shard);
+  const { root, layers, rows } = await commitFullResult(shard, o);
   const required = challengeRows(shard, root, k);
   const revealed = required.map((idx) => ({
     index: idx,
@@ -334,6 +337,9 @@ export const DEFAULT_TOLERANCE = 1e-2;
  * @param {number} [o.k]                    must match what the submitter used
  * @param {number} [o.elementsPerRow=4]      ground-truth spot-check density
  * @param {number} [o.tolerance]
+ * @param {boolean} [o.memoryHard]           must match what the submitter
+ *                                           used -- forwarded to hashRow
+ *                                           (merkle.js, Q7)
  * @returns {Promise<{ok:boolean, checkedRows:number[], failures:Array,
  *                     worstError:number}>}
  */
@@ -373,7 +379,7 @@ export async function verifyRowSubmission(shard, result, o = {}) {
       continue;
     }
 
-    const leafHash = await hashRow(entry.values);
+    const leafHash = await hashRow(entry.values, o);
     const proof = entry.proof.map((p) => ({ hash: fromHex(p.hash), isRight: p.isRight }));
     const included = await verifyInclusion(leafHash, proof, rootBytes);
     if (!included) {

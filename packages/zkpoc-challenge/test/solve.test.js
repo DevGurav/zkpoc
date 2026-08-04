@@ -40,3 +40,21 @@ test('a response to the wrong shard is denied, not accidentally admitted', async
   const resolved = await resolveChallenge(shardB, responseToA, {});
   assert.equal(resolved.outcome, ChallengeOutcome.DENY);
 });
+
+// Small buffer, same reason packages/zkpoc-broker's own memory-hard tests
+// use one -- this proves solveChallenge forwards the option correctly, not
+// that the production-sized buffer is fast (see bench/memory_hard_overhead.py
+// for the real cost).
+test('solveChallenge forwards memoryHard through to the underlying commitment (Q7/ADR-0013)', async () => {
+  const shard = mkSmallShard();
+  const opts = { memoryHard: true, memoryHardWords: 256, memoryHardRounds: 1 };
+
+  const response = await solveChallenge(shard.toJSON(), 'visitor-1', opts);
+  const resolved = await resolveChallenge(shard, response, opts);
+  assert.equal(resolved.outcome, ChallengeOutcome.ADMIT, JSON.stringify(resolved.gate.failures));
+
+  // Confirms this genuinely went through the memory-hard path, not just that
+  // the option was silently ignored: verifying without it must now fail.
+  const resolvedWrong = await resolveChallenge(shard, response, {});
+  assert.equal(resolvedWrong.outcome, ChallengeOutcome.DENY);
+});

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   hashRow, buildMerkleTree, proveInclusion, verifyInclusion,
   bytesEqual, toHex, fromHex, quantize,
+  MEMORY_HARD_WORDS, MEMORY_HARD_ROUNDS,
 } from '../src/merkle.js';
 
 const row = (n, seed = 0) => Array.from({ length: n }, (_, i) => Math.sin(i + seed) * 3);
@@ -36,6 +37,54 @@ test('hashRow distinguishes reordered rows', async () => {
   const reversed = [...r].reverse();
   assert.ok(!bytesEqual(await hashRow(r), await hashRow(reversed)),
     'row hashing must be position-sensitive, unlike ShardResult.digest() which is not');
+});
+
+// --------------------------------------------------------------------------
+// Memory-hard commitment (Q7/ADR-0013 mitigation) -- opt-in, off by default
+// --------------------------------------------------------------------------
+// A small buffer for these correctness tests: the property under test is
+// "does the function behave correctly," not "is it expensive." The actual
+// cost at production-sized buffers is measured separately in
+// bench/memory_hard_overhead.py, not asserted on here -- timing assertions
+// in a correctness suite are exactly the kind of flaky test this project's
+// own conventions (docs/testing-strategy.md) avoid.
+const MH_TEST_OPTS = { memoryHard: true, memoryHardWords: 256, memoryHardRounds: 1 };
+
+test('hashRow defaults to memoryHard: false -- identical output to calling it with no options', async () => {
+  const r = row(64);
+  assert.ok(bytesEqual(await hashRow(r), await hashRow(r, { memoryHard: false })));
+});
+
+test('hashRow(memoryHard: true) differs from the plain hash of the same row', async () => {
+  const r = row(64);
+  assert.ok(!bytesEqual(await hashRow(r), await hashRow(r, MH_TEST_OPTS)),
+    'the memory-hard path must not silently collapse to the plain digest');
+});
+
+test('hashRow(memoryHard: true) is deterministic for identical input', async () => {
+  const r = row(64);
+  assert.ok(bytesEqual(await hashRow(r, MH_TEST_OPTS), await hashRow(r, MH_TEST_OPTS)),
+    'prover and verifier must reproduce the identical commitment for the same row');
+});
+
+test('hashRow(memoryHard: true) is sensitive to a real divergence in a single element', async () => {
+  const r = row(64);
+  const corrupted = [...r];
+  corrupted[10] += 5;
+  assert.ok(!bytesEqual(await hashRow(r, MH_TEST_OPTS), await hashRow(corrupted, MH_TEST_OPTS)),
+    'the memory-hard path must still bind to the row\'s actual values, not just its length');
+});
+
+test('hashRow(memoryHard: true) respects overridden word/round counts', async () => {
+  const r = row(64);
+  const a = await hashRow(r, { memoryHard: true, memoryHardWords: 256, memoryHardRounds: 1 });
+  const b = await hashRow(r, { memoryHard: true, memoryHardWords: 512, memoryHardRounds: 1 });
+  assert.ok(!bytesEqual(a, b), 'different buffer sizes must produce different commitments');
+});
+
+test('the exported defaults are what the module docstring claims', () => {
+  assert.equal(MEMORY_HARD_WORDS, 1 << 14);
+  assert.equal(MEMORY_HARD_ROUNDS, 2);
 });
 
 test('quantize rounds to the documented scale', () => {

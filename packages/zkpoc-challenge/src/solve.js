@@ -29,12 +29,21 @@ import { Shard, buildHonestSubmission } from '../../zkpoc-broker/index.js';
  * @param {string} workerId         identifies this response, not this device
  *                                  or this visitor -- a fresh id per attempt
  *                                  is fine and expected
+ * @param {object} [o]
+ * @param {boolean} [o.memoryHard]  must match the issuer's own setting for
+ *                                  this deployment -- see Q7/ADR-0013's
+ *                                  memory-hard commitment mitigation
+ *                                  (`merkle.js#hashRow`'s `memoryHard`
+ *                                  option). Not carried in the shard
+ *                                  descriptor itself, the same way `k` isn't
+ *                                  -- both sides configure it, matching the
+ *                                  existing protocol convention.
  * @returns {Promise<{shardId:string, workerId:string, root:string, rows:object[]}>}
  *          a plain-object `ShardResult`, ready to serialise and send back
  */
-export async function solveChallenge(shardDescriptor, workerId) {
+export async function solveChallenge(shardDescriptor, workerId, o = {}) {
   const shard = new Shard(shardDescriptor);
-  const result = await buildHonestSubmission(shard, workerId);
+  const result = await buildHonestSubmission(shard, workerId, o);
   return {
     shardId: result.shardId,
     workerId: result.workerId,
