@@ -67,11 +67,18 @@ WHAT THIS SCRIPT DOES NOT DO
 It does not benchmark Argon2 itself -- that would require implementing and
 tuning a real memory-hard KDF, which is out of scope for a measurement
 script and would not change the conclusion below (see the Result section for
-why the margin is wide enough not to hinge on Argon2 parameter tuning). It
-also does not have a MEASURED honest-mobile-device figure -- only
-laptop-igpu is measured project-wide (docs/device-tiers.md); mobile tiers
-remain literature-anchored placeholders and are reported as such, exactly
-like bench/breakeven.py flags them.
+why the margin is wide enough not to hinge on Argon2 parameter tuning).
+
+A NOTE ON "MOBILE" IN THE QUOTE ABOVE
+----------------------------------------
+The primary-risk quote (from docs/BUILD.md's original M2 design contract)
+says "honest mobile user" -- historical phrasing, left as originally
+written per ADR-0017. The actual measurement in Part 1 below was never a
+mobile measurement: it is GPU vs CPU on the SAME laptop (Intel Gen-12LP).
+As of ADR-0017, mobile device classes are out of this project's scope
+entirely (not merely unmeasured) -- laptop-cpu is the relevant honest,
+non-GPU-equipped reference device going forward, and the GPU/CPU asymmetry
+this script measures does not depend on the honest device being a phone.
 
 Run:  python bench/attacker_advantage.py
 Deps: none (stdlib only).
@@ -106,11 +113,11 @@ ANUBIS_MONTHLY_COST_USD = 0.01         # Ormandy's own estimate, "under a cent"
 # Literature-anchored placeholder tiers, for context only -- NOT measured.
 # Mirrors bench/breakeven.py's DEFAULT_TIERS naming so the two stay legible
 # against each other; flagged with the same convention used there.
+# Laptop/desktop only -- see ADR-0017.
 # --------------------------------------------------------------------------
 
 PLACEHOLDER_TIERS = {
-    "mobile-gpu": 300.0,     # bench/breakeven.py DEFAULT_TIERS, unmeasured
-    "mobile-cpu": 15.0,      # bench/breakeven.py DEFAULT_TIERS, unmeasured
+    "laptop-dgpu": 5000.0,   # bench/breakeven.py DEFAULT_TIERS, unmeasured
     "desktop-dgpu": 5000.0,  # bench/breakeven.py DEFAULT_TIERS, unmeasured
 }
 
@@ -234,18 +241,18 @@ def report_cost_context() -> None:
 def report_mitigation_pointer() -> None:
     print()
     print("=" * 78)
-    print("MITIGATION -- not solved here, pointed at explicitly")
+    print("MITIGATION -- attempted since this script was first written; not solved")
     print("=" * 78)
-    print("  BUILD.md's own primary-risk note names the fix: mix a memory-hard")
-    print("  component into the shard commitment, rather than relying on the GEMM")
-    print("  kernel alone for deterrence. Concretely, a next step worth scoping:")
-    print("  require the row-hash commitment (merkle.js#hashRow, ADR-0011) to")
-    print("  incorporate a memory-hard KDF over each row rather than a single")
-    print("  SHA-256 pass -- this would raise the memory-hardness of the")
-    print("  COMMITMENT step without changing the GEMM kernel or the useful-work")
-    print("  claim, since the underlying matmul is still what gets sold. Sizing")
-    print("  and benchmarking that change is out of scope for this measurement and")
-    print("  is recorded as an open question rather than attempted here.")
+    print("  BUILD.md's own primary-risk note named the fix: mix a memory-hard")
+    print("  component into the shard commitment (merkle.js#hashRow, ADR-0011)")
+    print("  rather than relying on the GEMM kernel alone for deterrence. It was")
+    print("  subsequently built, tested, and measured (bench/memory_hard_overhead.js)")
+    print("  -- and found structurally too costly at per-row granularity: cost")
+    print("  scales linearly with shard size, so no buffer size tested is both")
+    print("  plausibly GPU-resistant and practically fast (ADR-0016). Not deployed.")
+    print("  A cheaper alternative -- fold memory-hardness in once per submission")
+    print("  instead of once per row -- is named as Q8 in docs/BUILD.md sec.5,")
+    print("  not designed or built.")
 
 
 def main() -> None:

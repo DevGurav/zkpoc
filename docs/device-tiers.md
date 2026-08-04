@@ -1,7 +1,11 @@
 # Device tiers — where the placeholder numbers come from
 
 `DEFAULT_TIERS` in `bench/breakeven.py` carries `flops_gflops` and `watts_full`
-for six device classes. **Every one is a placeholder** until real probe data
+for four device classes, laptop and desktop only —
+[ADR-0017](adr/0017-scope-narrowed-to-laptop-desktop.md) narrowed scope away
+from mobile, which carried materially worse thermal/battery/GPU-gap headroom
+than laptop-class hardware already strains on every axis this project
+measures. **Every remaining tier is a placeholder** until real probe data
 lands in `bench/device/measurements/`. This file records how each was derived
 so the estimates can be argued with, and so it is obvious what changes when
 measurements arrive.
@@ -28,8 +32,6 @@ from compute value, and using total draw would overstate the cost.
 | `laptop-dgpu` | webgpu | 5000 | 80 | Comparable silicon to the desktop tier but power-limited; same throughput at roughly half the marginal draw. |
 | `laptop-igpu` | webgpu | **107.2** | **9.1** | **FULLY MEASURED** — Intel Gen-12LP (Iris Xe): F(d) from a 120s sustained N=1024 run, watts from WMI energy-counter differencing. First tier with no placeholder left. See below. |
 | `laptop-cpu` | wasm-simd | 80 | 20 | ~200 GFLOPS AVX2 across cores × ~40% for WASM SIMD. |
-| `mobile-gpu` | webgpu | 300 | 6 | Recent phone GPU, aggressively thermally limited in sustained use. |
-| `mobile-cpu` | wasm-simd | 15 | 4 | Phone CPU under WASM SIMD, sustained rather than burst. |
 
 ## What the first real measurement changed
 
@@ -95,7 +97,7 @@ uneconomic at every share** — the conclusion from Pass 1 survives, but now on
 numbers that are actually right rather than numbers that happened to point the
 same direction for the wrong reason.
 
-### What this means for the other five tiers
+### What this means for the other three tiers
 
 They are still placeholders, and this episode is a caution rather than a
 license to trust them less arbitrarily. The FLOPS placeholder was wrong by
@@ -113,8 +115,9 @@ These are the places the placeholders are most likely wrong, in rough order of
 how much they would move the break-even surface.
 
 - **Sustained vs burst is not modelled.** All figures are nominally sustained,
-  but thermal throttling on laptops and phones can halve throughput within
-  60–90 seconds. The probe's duty-cycle mode exists partly to expose this;
+  but thermal throttling on laptops can halve throughput within 60–90
+  seconds — worse on a thin laptop than a desktop tower with real airflow.
+  The probe's duty-cycle mode exists partly to expose this;
   a 5% duty cycle may sustain far better than the 100% number implies, which
   would help the low-share end of the surface.
 - **`desktop-dgpu` and `laptop-dgpu` share a GFLOPS figure.** Deliberate, to

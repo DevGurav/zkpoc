@@ -54,8 +54,10 @@ This is why the project's framing changed
 than simply reporting a negative result.
 
 **One tier is now fully measured** (`laptop-igpu`, Intel Gen-12LP): F(d) =
-107.2 GFLOPS, watts = 9.1 W, both real. The other five remain
+107.2 GFLOPS, watts = 9.1 W, both real. The other three remain
 literature-anchored placeholders — flagged on every `bench/breakeven.py` run.
+(Originally six tiers including two mobile classes; scope narrowed to
+laptop/desktop only — [ADR-0017](adr/0017-scope-narrowed-to-laptop-desktop.md).)
 
 ## M1 — Worker, governor, Compute Consent Manifest
 
@@ -159,8 +161,10 @@ this section is a milestone-level summary of it.
   (ADR-0016) — the gap itself remains open.
 - Publisher SDK + content gate (the secondary barter demo surface) is M4
   scope, not M2's.
-- Five of six device tiers remain unmeasured placeholders (unchanged since
-  M0 — see [docs/device-tiers.md](device-tiers.md)).
+- Three of four device tiers remain unmeasured placeholders — laptop and
+  desktop only, mobile out of scope
+  ([ADR-0017](adr/0017-scope-narrowed-to-laptop-desktop.md)) — see
+  [docs/device-tiers.md](device-tiers.md).
 
 ## M3 — ZK layer
 

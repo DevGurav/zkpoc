@@ -116,12 +116,14 @@ Full account in [docs/device-tiers.md](docs/device-tiers.md), decision record
 in [ADR-0009](docs/adr/0009-energy-counter-not-instant-rate.md) and
 [ADR-0010](docs/adr/0010-sustained-trend-fit-not-quick-sweep.md).
 
-> The remaining five tiers are still literature-anchored **placeholders**. The
-> lesson above argues for caution in both directions — the original placeholder
-> was wrong by 11×, and the first attempt to correct it was *also* wrong, just
-> less wrong. The solver flags every unmeasured value on every run — `*` for
-> FLOPS, `w` for watts — and σ\* stays provisional until more devices are
-> measured with a sustained run, not a quick one.
+> The remaining three tiers (laptop/desktop only — mobile is out of scope,
+> [ADR-0017](docs/adr/0017-scope-narrowed-to-laptop-desktop.md)) are still
+> literature-anchored **placeholders**. The lesson above argues for caution in
+> both directions — the original placeholder was wrong by 11×, and the first
+> attempt to correct it was *also* wrong, just less wrong. The solver flags
+> every unmeasured value on every run — `*` for FLOPS, `w` for watts — and
+> σ\* stays provisional until more devices are measured with a sustained run,
+> not a quick one.
 
 ---
 
@@ -393,7 +395,7 @@ answer and the measurement that caught it, which is the part worth keeping.
 | [docs/architecture.md](docs/architecture.md) | System overview, component diagram, trust boundaries, full session data flow |
 | [docs/roadmap.md](docs/roadmap.md) | Milestone status — the source of truth the table above summarises |
 | [docs/testing-strategy.md](docs/testing-strategy.md) | Coverage map, the one test that actually matters and why, what's verified manually vs. automated |
-| [docs/adr/](docs/adr/README.md) | 15 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
+| [docs/adr/](docs/adr/README.md) | 17 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
 | [zk/README.md](zk/README.md) | M3 Track 1 toolchain: build/test instructions, toy-ceremony caveat, tooling bugs worked around |
 | [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
 | [docs/dual-use-evaluation.md](docs/dual-use-evaluation.md) | M4: why the detector baselines are environment-blocked, and what stands in their place |

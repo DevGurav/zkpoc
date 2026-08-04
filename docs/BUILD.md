@@ -59,11 +59,12 @@ measure it and add it here.
 
 ### Known-unmeasured (flagged, not assumed away)
 
-Five of six device tiers remain literature-anchored placeholders. `bench/breakeven.py`
-marks them `*` (FLOPS) and `w` (watts) on every run. **Do not quote a σ\* figure
-for an unmeasured tier without the caveat.** The one tier that *was* measured
-came in 11× below its placeholder, and the first attempt to correct it was
-also wrong — see [device-tiers.md](device-tiers.md).
+Three of four device tiers remain literature-anchored placeholders (laptop
+and desktop only — mobile is out of scope, [ADR-0017](adr/0017-scope-narrowed-to-laptop-desktop.md)).
+`bench/breakeven.py` marks them `*` (FLOPS) and `w` (watts) on every run.
+**Do not quote a σ\* figure for an unmeasured tier without the caveat.** The
+one tier that *was* measured came in 11× below its placeholder, and the
+first attempt to correct it was also wrong — see [device-tiers.md](device-tiers.md).
 
 ---
 
@@ -404,7 +405,7 @@ Tracked here so they don't get silently resolved by assumption.
 | --- | --- | --- | --- |
 | Q1 | Does ML shard work widen the attacker/honest-user cost gap vs. a memory-hard puzzle? | M2 exit #3 | **Resolved — yes, 41×–271× wider.** `bench/attacker_advantage.py`, [ADR-0013](adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) |
 | Q2 | What is c_proof in practice, not as a 10³–10⁶ range? | Sharpens §1, ADR-0006 | Open — M3 Track 2 environment-blocked (no Rust toolchain for RISC Zero/SP1), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
-| Q3 | Do discrete-GPU tiers hold their clocks better than the integrated tier measured so far? | Five placeholder tiers | Open — needs sustained runs on more hardware |
+| Q3 | Do discrete-GPU tiers hold their clocks better than the integrated tier measured so far? | Three placeholder tiers | Open — needs sustained runs on more hardware |
 | Q4 | Can `data_access` containment be *proven* rather than structurally asserted? | Strengthens SPEC's stated gap | Open — post-M3 |
 | Q5 | Does the stake/slashing mechanism ADR-0006 assumes survive contact with a real adversary model? | M2 exit #5 | Open |
 | Q6 | Revealing k full rows costs O(k·n) floats per submission (k=8, n=1024 → ~32KB) — is that bandwidth acceptable for a real challenge-mode round trip, or does it need row-compression / a smaller n for challenge-sized shards? | M2.5 | Open — needs a real transport, not just headless tests |

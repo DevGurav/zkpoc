@@ -90,14 +90,15 @@ class DeviceTier:
         return ("" if self.flops_measured else "*") + ("" if self.watts_measured else "w")
 
 
-# Defaults. Rationale in docs/device-tiers.md.
+# Defaults. Rationale in docs/device-tiers.md. Laptop/desktop only -- mobile
+# tiers were dropped (they carried materially worse thermal/battery/GPU-gap
+# headroom than laptop-class hardware already strains, on every axis this
+# project measures) -- see ADR-0017.
 DEFAULT_TIERS = [
     DeviceTier("desktop-dgpu",   "webgpu",     5000.0, 180.0),
     DeviceTier("laptop-dgpu",    "webgpu",     5000.0,  80.0),
     DeviceTier("laptop-igpu",    "webgpu",      850.0,  25.0),
     DeviceTier("laptop-cpu",     "wasm-simd",    80.0,  20.0),
-    DeviceTier("mobile-gpu",     "webgpu",      300.0,   6.0),
-    DeviceTier("mobile-cpu",     "wasm-simd",    15.0,   4.0),
 ]
 
 
