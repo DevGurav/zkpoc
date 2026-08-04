@@ -1,6 +1,8 @@
 # ADR-0007: In-browser proving is Circom/Groth16; zkVM moves to settlement-side
 
-Status: Accepted (2026-08-02) — describes the M3 plan; not yet implemented
+Status: Accepted (2026-08-02) — Track 1 implemented 2026-08-04, see
+[ADR-0014](0014-m3-track1-toolchain-and-track2-blocked.md) for toolchain
+choices and Track 2's status
 
 ## Context
 

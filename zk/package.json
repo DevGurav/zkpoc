@@ -1,0 +1,17 @@
+{
+  "name": "@zkpoc/zk-toolchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Circom + snarkjs + Hardhat toolchain for M3 Track 1 (ADR-0007) -- deliberately isolated from the rest of the monorepo",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "hh2",
+    "circom2": "^0.2.23",
+    "circomlib": "^2.0.5",
+    "hardhat": "^2.22.0",
+    "snarkjs": "^0.7.6"
+  }
+}
