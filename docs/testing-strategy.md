@@ -107,8 +107,12 @@ started — flagged here rather than silently left off the coverage map.
   only** — no real browser/WebGPU walkthrough yet for the challenge
   protocol, the same gap M1's manual-verification section already names for
   the worker/governor.
-- **The Circom circuit and Solidity verifier.** M3 scope; see
-  [ADR-0007](adr/0007-tiered-zk-proving-plan.md).
+- **The Circom circuit and Solidity verifier are tested, but in a separate
+  suite** (`zk/test/verifier.test.js`, `npm test` from `zk/`, 4/4 passing —
+  not counted in the 195 above since `zk/` is deliberately outside the root
+  workspaces, see [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md)).
+  Not yet wired into the broker's live audit flow — see `docs/BUILD.md`'s
+  Q4.
 - **`bench/*.py` scripts have no unit tests**, but they are self-verifying by
   construction: `tdsc_reproduction.py` asserts its own reconstructed values
   against the source paper's stated figures and fails loudly (`assert`) if

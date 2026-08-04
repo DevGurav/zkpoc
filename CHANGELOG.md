@@ -8,10 +8,66 @@ chronological version.
 
 ## [Unreleased]
 
-Nothing landed yet. M3 (ZK layer) is next — plan recorded ahead of
-implementation in
-[ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md) and
-[docs/BUILD.md](docs/BUILD.md#m3--zk-layer).
+Nothing landed yet. M4 (demo, SDK, standards, outreach) is next.
+
+## [M3] — 2026-08-04 — ZK layer: Track 1 (Circom/Groth16) done, Track 2 blocked
+
+Track 1 exit criteria met; Track 2 reported environment-blocked rather than
+faked. Plan in [ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md),
+implementation decisions in
+[ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md), full
+account in [docs/BUILD.md](docs/BUILD.md#m3--zk-layer).
+
+### Added
+
+- `circuits/quant_dot.circom`: Groth16 circuit proving an 8-term quantized
+  dot product — scoped to `packages/zkpoc-broker/src/shard.js#referenceElement`'s
+  computation and `merkle.js`'s `QUANTIZE_SCALE` convention — as a private
+  witness against a public output. 360 constraints (328 non-linear + 32
+  linear), 16 private inputs, 1 public output. Includes a signed range check
+  (`SignedRangeCheck`, via circomlib's `Num2Bits`) on every input so a
+  dishonest prover can't wrap the field modulus and satisfy the dot-product
+  constraint with a different integer value than it appears to reveal.
+- `contracts/ShardRowVerifier.sol`: generated Solidity Groth16 verifier,
+  committed (deterministically regenerable from the circuit via
+  `zk/scripts/build.js`, not hand-edited).
+- `zk/`: isolated toolchain package (circom2, snarkjs, Hardhat 2 +
+  `@nomicfoundation/hardhat-toolbox`) — deliberately outside the root npm
+  workspaces, since this is the project's first real heavy-dependency
+  subtree; see ADR-0014.
+  - `scripts/build.js`: circom2 compile → toy powers-of-tau ceremony →
+    Groth16 setup → `verification_key.json` + `contracts/ShardRowVerifier.sol`.
+  - `test/verifier.test.js`: deploys the verifier on Hardhat's local EVM,
+    proves a real `Shard`-derived witness (not synthetic numbers), verifies
+    it on-chain, and independently rejects a tampered public signal and a
+    tampered proof point (4/4 passing).
+
+### Fixed (tooling, not project code)
+
+- **circom2's `-o` output path resolves relative to the input file's
+  directory**, not cwd, when the input path contains `..` — confirmed by
+  direct experiment. Worked around in `build.js` by copying the circuit
+  source into the build directory first and compiling with a bare filename.
+- **circom2's CLI process does not reliably exit** after printing its own
+  success banner, hanging a naive `execSync` caller indefinitely (observed:
+  40+ minutes at ~0% CPU) even though compilation itself takes seconds.
+  Replaced with `spawn` + resolve-on-success-banner + explicit `child.kill()`.
+  The parent process has an analogous issue (snarkjs's WASM curve
+  implementation keeps worker threads alive) — fixed with an explicit
+  `process.exit(0)` after all output is flushed.
+- **Hardhat 2 (`HH1007`) refuses to compile a source file it considers
+  outside the project**, which `contracts/` is by default relative to
+  `zk/hardhat.config.cjs`'s directory. Fixed by setting `paths.root` to the
+  repo root, making `contracts/` a genuine descendant again.
+
+### Blocked, reported honestly
+
+- **Track 2** (RISC Zero/SP1 settlement-side proving measurement): requires
+  a Rust toolchain with no WASM/npm-installable distribution; unavailable in
+  this environment. `bench/breakeven.py`'s `c_proof` parameter keeps its
+  literature-anchored 10³–10⁶ range rather than being replaced with a
+  fabricated number — see ADR-0014 for what tooling would close this and
+  Q2 in `docs/BUILD.md` §5, left open rather than guessed at.
 
 ## [M2] — 2026-08-04 — Broker, tiered verification, useful-PoW challenge protocol
 

@@ -35,11 +35,13 @@ mechanism exists as the actual defense — see
 
 From [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md#what-this-does-not-do):
 
-- **Not guaranteed:** that the computation was performed correctly by
-  cryptographic proof — M2's redundancy consensus and stake-derived audit
-  (`packages/zkpoc-broker`) catch free-riding and disagreement with high
-  probability, but the full replacement (a ZK proof of the computation
-  itself) is M3 scope — see [docs/roadmap.md](docs/roadmap.md).
+- **Not guaranteed, in the live system:** that the computation was performed
+  correctly by cryptographic proof — M2's redundancy consensus and
+  stake-derived audit (`packages/zkpoc-broker`) catch free-riding and
+  disagreement with high probability. M3 Track 1 built and on-chain-verified
+  a real Groth16 circuit for this class of claim
+  (`circuits/quant_dot.circom`), but it is not yet wired into the broker's
+  live audit flow — see [docs/BUILD.md](docs/BUILD.md)'s Q4.
 - **Not guaranteed:** that the platform (browser, OS) actually obeyed the
   manifest. A user running a hostile or modified browser build has no
   recourse from the manifest alone.
@@ -84,9 +86,11 @@ From [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md#what-this-does-not-
 - Storage and network denial (`data_access.storage`, `.network`) are manifest
   *claims* the embedding page is expected to enforce; there is no independent
   runtime proof of containment yet.
-- Result correctness is enforced probabilistically (redundancy + audit), not
-  by cryptographic proof of the computation itself — that's a ZK circuit,
-  M3 scope, not yet implemented.
+- In the live system, result correctness is enforced probabilistically
+  (redundancy + audit), not by cryptographic proof of the computation
+  itself. A real ZK circuit exists and verifies on-chain
+  (`circuits/quant_dot.circom`, `zk/`) but is not yet wired into the
+  broker's audit flow to replace `auditFull()`'s disclosure.
 - The attacker-advantage ratio for challenge-mode work is measured and
   reported as unfavourable relative to a memory-hard control
   ([ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md));

@@ -43,9 +43,14 @@ flowchart TB
         Challenge["challenge.js\nsingle-gate anti-bot path\n(ADR-0012)"]
     end
 
-    subgraph Planned["Planned — M3/M4"]
-        Circuits["Circom/Groth16 circuit\n+ zkVM measurement track"]
-        Contracts["ShardVerifier.sol"]
+    subgraph ZK["ZK layer — circuits/, contracts/, zk/ (M3 Track 1, done)"]
+        Circuits["quant_dot.circom\nGroth16, circom2 + snarkjs"]
+        Contracts["ShardRowVerifier.sol\n(generated, committed)"]
+    end
+
+    subgraph Planned["Planned — M4 / blocked"]
+        ZkVM["Track 2: RISC Zero/SP1\nsettlement-side measurement\n(environment-blocked, ADR-0014)"]
+        SDKPkg["zkpoc-sdk"]
     end
 
     SDK -->|"1. request manifest"| Issue
@@ -62,8 +67,8 @@ flowchart TB
     Gov -.->|"barter mode: shard result"| Queue
     Gov -.->|"challenge mode: single response"| Challenge
 
-    Audit -.->|"M3: proof, not full disclosure"| Circuits
-    Circuits -.->|"M3"| Contracts
+    Audit -.->|"M3: proof, not yet wired in\n(replaces full disclosure — Q4)"| Circuits
+    Circuits --> Contracts
 
     style Planned stroke-dasharray: 5 5
 ```
@@ -75,8 +80,10 @@ flowchart TB
 | `packages/zkpoc-broker/` | Shard model, tier sizing, queue, consensus, audit, ledger, challenge protocol | **Done** — 161 tests |
 | `bench/` | Economic model, device measurement, dispatch/power analysis, attacker-advantage measurement | **Done** — M0/M2 |
 | `demo/` | Live meter, tamper panel, revocation demo | **Done** |
-| `circuits/` | Circom circuit for the must-land in-browser proof | Planned — M3 |
-| `contracts/` | Solidity verifier + compute-credit ledger | Planned — M3 |
+| `circuits/` | Circom circuit for the must-land in-browser proof | **Done** — M3 Track 1 |
+| `contracts/` | Generated Solidity Groth16 verifier | **Done** — M3 Track 1 |
+| `zk/` | Isolated circom2/snarkjs/Hardhat toolchain (build + test), not in root workspaces | **Done** — M3 Track 1, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
+| Track 2 (settlement-side zkVM) | RISC Zero/SP1 proving-overhead measurement | **Blocked** — no Rust toolchain in this environment, [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
 | `explainer/` | W3C/WICG Compute Consent Manifest explainer | Planned — M4 |
 
 See [roadmap.md](roadmap.md) for the milestone breakdown this table summarises.
@@ -224,11 +231,14 @@ device, 41×–271× worse than a literature-cited memory-hard control
 — with a mitigation named (mix a memory-hard KDF into the row commitment)
 but not yet built.
 
-Settlement-side ZK proof verification and on-chain credit settlement remain
-M3 scope (`docs/adr/0007-tiered-zk-proving-plan.md`) and are not yet
-implemented; `audit.js#auditFull`'s full-disclosure check is the interim
-stand-in — see that module's docstring for why it is a legitimate one, not a
-placeholder pretending to be equivalent.
+`circuits/quant_dot.circom` (M3 Track 1) proves the same class of claim
+`audit.js#auditFull`'s full-disclosure check does, without disclosure — but
+it exists and verifies on-chain as a standalone artifact, not yet wired into
+the broker's live audit flow (tracked as Q4 in `docs/BUILD.md` §5).
+`auditFull()` remains the actual verification path in production today; see
+that module's docstring for why it is a legitimate interim stand-in, not a
+placeholder pretending to be equivalent. On-chain credit settlement itself
+is M4 scope.
 
 ## Why the economics live in `bench/`, not in the runtime
 

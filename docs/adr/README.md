@@ -36,6 +36,7 @@ material that is easiest to lose once the code moves on.
 | [0011](0011-commit-then-challenge-row-verification.md) | Commit-then-challenge row verification, replacing point-sample challenges | Accepted |
 | [0012](0012-challenge-mode-single-submission-gate.md) | Challenge mode uses a single-submission gate, not the barter pipeline | Accepted |
 | [0013](0013-measured-attacker-advantage-exceeds-memory-hard-control.md) | Measured attacker-advantage ratio exceeds the memory-hard control — reported, mitigation deferred | Accepted |
+| [0014](0014-m3-track1-toolchain-and-track2-blocked.md) | M3 Track 1 toolchain (circom2/snarkjs/Hardhat 2), dependency isolation, Track 2 reported environment-blocked | Accepted |
 
 ## Adding one
 

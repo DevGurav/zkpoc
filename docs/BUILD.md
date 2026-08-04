@@ -47,7 +47,7 @@ measure it and add it here.
 | Break-even share, best case | σ\* ≈ 6.7% vs. a 5% design ceiling | Most favourable assumptions modelled — [ADR-0001](adr/0001-break-even-frontier-and-anti-bot-flagship.md) |
 | Verification efficiency | η = 1 / (r + a·c_proof) | `bench/breakeven.py#VerificationPolicy` |
 | Minimum safe audit rate | a\* = 1 / (1 + k), k = stake in shards | Inspection game — [ADR-0006](adr/0006-audit-rate-from-inspection-game.md) |
-| ZK proving cost multiple | c_proof ≈ 10³–10⁶ | ZKML survey (arXiv:2502.18535) — refine with M3 Track 2 measurement |
+| ZK proving cost multiple | c_proof ≈ 10³–10⁶ | ZKML survey (arXiv:2502.18535) — M3 Track 2 measurement would refine this but is environment-blocked (no Rust toolchain), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
 
 ### Shard verification constants (M2.1/M2.2, `packages/zkpoc-broker`)
 
@@ -331,23 +331,34 @@ consequence of a\*=1/(1+k) being per-identity. 9 new tests (161 in
 
 **All five M2 exit criteria are now met. M2 is done.**
 
-### M3 — ZK layer
+### M3 — ZK layer ✅ Track 1 DONE, Track 2 blocked
 
 Plan recorded ahead of implementation in
 [ADR-0007](adr/0007-tiered-zk-proving-plan.md) because its two shaping
 constraints are already settled by evidence: WASM's 4 GB ceiling rules out
 in-browser zkVMs entirely, and FibRace measured a ≥3 GB RAM floor for
-client-side proving.
+client-side proving. Toolchain choices and Track 2's status recorded in
+[ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md).
 
-- **Track 1 (must land, in-browser):** Circom + snarkjs Groth16 over one fixed
-  small kernel; Solidity verifier on Anvil.
-- **Track 2 (settlement-side, measurement only):** RISC Zero or SP1 on the
-  broker, producing the real `c_proof` that §1 currently carries as a range.
-  Must not block Track 1.
+- **Track 1 (must land, in-browser) — done.** `circuits/quant_dot.circom`
+  (circom2 + snarkjs, Groth16) proves an 8-term quantized dot product —
+  scoped to `packages/zkpoc-broker/src/shard.js#referenceElement`'s
+  computation and `merkle.js`'s `QUANTIZE_SCALE` convention — against a
+  generated Solidity verifier (`contracts/ShardRowVerifier.sol`), deployed
+  and checked on Hardhat's local EVM. 360 constraints (328 non-linear + 32
+  linear), 16 private inputs, 1 public output.
+- **Track 2 (settlement-side, measurement only) — blocked, reported not
+  faked.** RISC Zero and SP1 require a Rust toolchain with no WASM/npm
+  distribution; none is available in this environment. `c_proof` in §1
+  stays a literature-anchored range rather than being replaced with a
+  fabricated number. See ADR-0014 for what tooling would close this.
 
 **Exit criteria:** Track 1 proof verifies on-chain and a tampered witness is
-rejected; Track 2 produces an overhead table that replaces the c_proof range
-in §1 with a measured value.
+rejected — **met**, `zk/test/verifier.test.js` (4/4 passing): a genuine
+proof over real Shard-derived inputs verifies true; a tampered public signal
+and a tampered proof point are each independently rejected. Track 2's
+overhead table is **not produced** — environment-blocked, see above; Q2
+below stays open rather than answered with a guess.
 
 ### M4 — Demo, SDK, standards, dual-use evaluation
 
@@ -367,7 +378,7 @@ Tracked here so they don't get silently resolved by assumption.
 | # | Question | Blocks | Status |
 | --- | --- | --- | --- |
 | Q1 | Does ML shard work widen the attacker/honest-user cost gap vs. a memory-hard puzzle? | M2 exit #3 | **Resolved — yes, 41×–271× wider.** `bench/attacker_advantage.py`, [ADR-0013](adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) |
-| Q2 | What is c_proof in practice, not as a 10³–10⁶ range? | Sharpens §1, ADR-0006 | Open — M3 Track 2 |
+| Q2 | What is c_proof in practice, not as a 10³–10⁶ range? | Sharpens §1, ADR-0006 | Open — M3 Track 2 environment-blocked (no Rust toolchain for RISC Zero/SP1), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md) |
 | Q3 | Do discrete-GPU tiers hold their clocks better than the integrated tier measured so far? | Five placeholder tiers | Open — needs sustained runs on more hardware |
 | Q4 | Can `data_access` containment be *proven* rather than structurally asserted? | Strengthens SPEC's stated gap | Open — post-M3 |
 | Q5 | Does the stake/slashing mechanism ADR-0006 assumes survive contact with a real adversary model? | M2 exit #5 | Open |

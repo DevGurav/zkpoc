@@ -189,7 +189,7 @@ applies in full and no anti-abuse claim is made for that mode.
 | **M0** Economic model + device benchmark | done |
 | **M1** Worker + resource governor + Compute Consent Manifest | done; 34 tests passing |
 | **M2** Broker, tiered verification, useful-PoW challenge protocol | done; 161 tests, [ADR-0013](docs/adr/0013-measured-attacker-advantage-exceeds-memory-hard-control.md) finding reported |
-| **M3** ZK layer — in-browser Groth16, settlement-side zkVM | not started (plan recorded, [ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md)) |
+| **M3** ZK layer — in-browser Groth16, settlement-side zkVM | Track 1 done, Track 2 environment-blocked ([ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md), [ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md)) |
 | **M4** Demo, SDK, W3C/WICG explainer | not started |
 
 This table is a summary. [docs/roadmap.md](docs/roadmap.md) is the source of
@@ -300,6 +300,42 @@ python bench/attacker_advantage.py
 
 ---
 
+## Proved, not just checked (M3)
+
+Everything above verifies a claim by re-checking it (redundancy, audit,
+row-reveal). `circuits/quant_dot.circom` proves one instead: a Groth16 circuit
+over an 8-term quantized dot product — the same computation
+`shard.js#referenceElement` performs, the same `QUANTIZE_SCALE` convention
+`merkle.js` uses — that convinces a verifier the private witness satisfies
+the claimed output *without revealing the witness*. That's the gap this
+closes relative to M2's row-reveal audit: `auditFull()` proves correctness by
+disclosing every challenged row in the clear; this circuit proves the same
+class of claim while disclosing nothing.
+
+Circom2 (a WASM port of the circom compiler) and snarkjs stand in for a
+native Rust toolchain unavailable in this environment; Hardhat 2's local EVM
+stands in for Anvil. Both choices, plus why this toolchain lives in its own
+`zk/` package outside the rest of the project's zero-dependency packages,
+are in [ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md).
+
+```sh
+cd zk && npm install && npm run build && npm test   # 4/4 passing
+```
+
+`npm test` deploys the generated `contracts/ShardRowVerifier.sol` to
+Hardhat's local EVM, proves a real `Shard`-derived witness, and checks both
+directions: the genuine proof verifies true, and a tampered public signal
+and a tampered proof point are each independently rejected.
+
+**Stated plainly, the settlement-side half didn't land.** The plan
+([ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md)) called for a second,
+independent track — RISC Zero or SP1 measuring proving overhead on the
+broker at settlement, to replace the literature-derived `c_proof` range in
+the break-even model with a measured number. Both need a Rust toolchain with
+no WASM/npm-installable distribution, and none is available here. Rather
+than substitute a guessed number, `c_proof` stays a range — see ADR-0014 and
+`docs/BUILD.md`'s Q2.
+
 ## Documentation
 
 Written as it would be kept alongside real engineering work, not
@@ -312,7 +348,8 @@ answer and the measurement that caught it, which is the part worth keeping.
 | [docs/architecture.md](docs/architecture.md) | System overview, component diagram, trust boundaries, full session data flow |
 | [docs/roadmap.md](docs/roadmap.md) | Milestone status — the source of truth the table above summarises |
 | [docs/testing-strategy.md](docs/testing-strategy.md) | Coverage map, the one test that actually matters and why, what's verified manually vs. automated |
-| [docs/adr/](docs/adr/README.md) | 13 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
+| [docs/adr/](docs/adr/README.md) | 14 Architecture Decision Records — the *why* behind every non-obvious design choice, including a corrected verification vulnerability and an unfavourable measurement reported as-is |
+| [zk/README.md](zk/README.md) | M3 Track 1 toolchain: build/test instructions, toy-ceremony caveat, tooling bugs worked around |
 | [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped, what broke, what got corrected — by milestone |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add a device measurement |
@@ -334,6 +371,9 @@ bench/attacker_advantage.py    GPU/CPU throughput ratio vs. memory-hard control
 packages/zkpoc-ccm/            Compute Consent Manifest — sign, verify, SPEC.md
 packages/zkpoc-worker/         resource governor + sandboxed shard worker, API.md
 packages/zkpoc-broker/         shard model, queue, consensus, audit, ledger, challenge
+circuits/quant_dot.circom      M3 Track 1 Groth16 circuit
+contracts/ShardRowVerifier.sol generated Solidity verifier (committed, regenerable)
+zk/                             isolated circom2/snarkjs/Hardhat toolchain, README.md
 demo/                          live meter, revocation, tamper tests
 docs/adr/                      Architecture Decision Records
 docs/architecture.md           system overview, trust boundaries

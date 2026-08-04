@@ -11,7 +11,7 @@ right and the README needs updating.
 | M0 — Economic model + device benchmark | **Done** | Yes — see below |
 | M1 — Worker, governor, Compute Consent Manifest | **Done** | Yes — see below |
 | M2 — Broker, tiered verification, useful-PoW challenge protocol | **Done** | Yes — all 5, see below |
-| M3 — ZK layer (in-browser Groth16 + settlement-side zkVM) | **Not started** (plan recorded — [ADR-0007](adr/0007-tiered-zk-proving-plan.md)) | — |
+| M3 — ZK layer (in-browser Groth16 + settlement-side zkVM) | **Track 1 done, Track 2 environment-blocked** ([ADR-0007](adr/0007-tiered-zk-proving-plan.md), [ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md)) | Track 1 yes; Track 2 not attemptable here |
 | M4 — Demo, SDK, W3C/WICG explainer, dual-use evaluation | **Not started** | — |
 
 ---
@@ -157,21 +157,32 @@ this section is a milestone-level summary of it.
 
 ## M3 — ZK layer
 
-**Not started**, but the plan is recorded ahead of implementation in
+The plan was recorded ahead of implementation in
 [ADR-0007](adr/0007-tiered-zk-proving-plan.md), because the two constraints
 that shape it (WASM's 4GB memory ceiling; FibRace's measured ≥3GB RAM floor
-for client-side proving) are already settled by evidence and don't need
-rediscovering under time pressure:
+for client-side proving) were already settled by evidence and didn't need
+rediscovering under time pressure. Implementation-level choices (toolchain,
+dependency isolation, Track 2's outcome) are in
+[ADR-0014](adr/0014-m3-track1-toolchain-and-track2-blocked.md).
 
-- **Track 1 (must land, in-browser):** Circom + snarkjs Groth16 over one fixed
-  small kernel, Solidity verifier on Anvil/Hardhat.
-- **Track 2 (settlement-side, measurement only):** RISC Zero or SP1 over the
-  same shard, producing the `c_proof` overhead figure
-  `bench/breakeven.py`'s `VerificationPolicy` already has a parameter slot
-  for.
-- Optional stretch: reproduce VerifBFL's native Nova/IVC benchmarks via
-  `nova-snark`, then measure degradation in a throttled browser tab — a
-  direct comparison against the primary reference on identical circuits.
+- **Track 1 (must land, in-browser) — done.** `circuits/quant_dot.circom`,
+  a quantized 8-term dot product scoped to the same computation
+  `packages/zkpoc-broker/src/shard.js#referenceElement` performs, compiled
+  with circom2 (a WASM port of circom — no native/Rust compiler available
+  in this environment), proved with snarkjs (Groth16), and verified on-chain
+  against a generated `contracts/ShardRowVerifier.sol` on Hardhat's local
+  EVM. `zk/test/verifier.test.js`: a genuine proof over real Shard-derived
+  inputs verifies true; a tampered public signal and a tampered proof point
+  are each independently rejected (4/4 passing).
+- **Track 2 (settlement-side, measurement only) — environment-blocked.**
+  RISC Zero and SP1 require a Rust toolchain with no WASM/npm-installable
+  distribution; none is available here. Rather than substitute a guessed
+  number, the `c_proof` overhead figure `bench/breakeven.py`'s
+  `VerificationPolicy` has a parameter slot for stays at its
+  literature-anchored range (ADR-0014).
+- Optional stretch (not attempted, same blocker): reproduce VerifBFL's
+  native Nova/IVC benchmarks via `nova-snark`, then measure degradation in a
+  throttled browser tab.
 
 ## M4 — Demo, packaging, standards, outreach
 

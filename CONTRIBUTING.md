@@ -17,6 +17,20 @@ toolchain for the CPU kernel — see
 [ADR-0003](docs/adr/0003-webgpu-mandatory.md)), that's fine, but it should be
 a deliberate decision with an ADR, not an accretion.
 
+**`zk/` is the one exception, by design.** M3 Track 1's Groth16 pipeline
+(circom2, snarkjs, Hardhat + toolbox) is a genuinely heavy dependency tree
+with no way to avoid one. Rather than accrete it into the root or a
+`packages/*` workspace, it lives in its own `zk/package.json`, outside the
+root npm workspaces — the top-level `npm install` above stays fast and
+dependency-free. Opt in explicitly if you're touching the ZK layer:
+
+```sh
+cd zk && npm install && npm run build && npm test
+```
+
+See [zk/README.md](zk/README.md) and
+[ADR-0014](docs/adr/0014-m3-track1-toolchain-and-track2-blocked.md) for why.
+
 ```sh
 git clone <repo>
 cd zk-poc
