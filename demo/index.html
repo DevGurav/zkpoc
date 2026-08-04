@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZK-PoC — consent, meter, revoke</title>
+<style>
+  :root { color-scheme: light dark; --fg:#111; --bg:#fff; --mut:#666; --ok:#0a5;
+          --bad:#c33; --warn:#a70; --bd:#ddd; --card:#00000006; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg:#e6e6e6; --bg:#111; --mut:#999; --ok:#3c9; --bad:#f66; --warn:#da3;
+            --bd:#333; --card:#ffffff08; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:1.5rem; background:var(--bg); color:var(--fg);
+         font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .wrap { max-width:940px; margin:0 auto; }
+  h1 { font-size:1.15rem; margin:0 0 .2rem; }
+  h2 { font-size:.9rem; margin:1.5rem 0 .5rem; color:var(--mut);
+       text-transform:uppercase; letter-spacing:.06em; }
+  p.sub { color:var(--mut); margin:0 0 1rem; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:8px;
+          padding:1rem; margin:.5rem 0; }
+  button { font:inherit; padding:.45rem .9rem; border:1px solid var(--bd);
+           border-radius:6px; background:transparent; color:var(--fg); cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--ok); color:var(--ok); }
+  button:disabled { opacity:.4; cursor:default; }
+  button.danger:hover:not(:disabled) { border-color:var(--bad); color:var(--bad); }
+  .row { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.75rem; }
+  .stat b { display:block; font-size:1.3rem; font-weight:600; font-variant-numeric:tabular-nums; }
+  .stat span { color:var(--mut); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .bar { height:8px; background:var(--bd); border-radius:4px; overflow:hidden; position:relative; }
+  .bar > i { display:block; height:100%; background:var(--ok); width:0; transition:width .25s; }
+  .bar > u { position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--bad); }
+  table { border-collapse:collapse; width:100%; }
+  td,th { text-align:left; padding:.25rem .6rem .25rem 0; border-bottom:1px solid var(--bd);
+          font-size:13px; vertical-align:top; }
+  th { color:var(--mut); font-weight:normal; }
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)} .mut{color:var(--mut)}
+  pre { background:var(--card); padding:.7rem; border-radius:6px; overflow-x:auto;
+        font-size:11.5px; max-height:260px; }
+  .pill { display:inline-block; padding:.1rem .5rem; border-radius:99px; font-size:11px;
+          border:1px solid currentColor; }
+  .note { font-size:12px; color:var(--mut); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>ZK-PoC — consent, meter, revoke</h1>
+<p class="sub">
+  A signed Compute Consent Manifest is verified independently, then a resource
+  governor executes shards inside its declared ceiling. The meter shows what is
+  actually being taken, not what was promised.
+</p>
+
+<h2>1 · Compute Consent Manifest</h2>
+<div class="card">
+  <div class="row" style="margin-bottom:.75rem">
+    <label>share ceiling
+      <select id="share">
+        <option value="0.05" selected>5% (the design ceiling)</option>
+        <option value="0.25">25%</option>
+        <option value="0.50">50%</option>
+      </select></label>
+    <label>duration <select id="dur">
+      <option value="60">60 s</option><option value="360" selected>360 s</option>
+    </select></label>
+    <label>path <select id="path">
+      <option value="gpu" selected>WebGPU</option><option value="cpu">CPU</option>
+    </select></label>
+    <button id="issue">Issue &amp; verify</button>
+  </div>
+  <table id="checks"><tr><td class="mut">no manifest issued yet</td></tr></table>
+</div>
+
+<h2>2 · Tamper tests</h2>
+<div class="card">
+  <p class="note" style="margin-top:0">
+    Each button alters the manifest <em>after</em> signing, then re-verifies.
+    A declaration is only meaningful if changing it is detectable, so these
+    must all fail — and the governor must refuse to start.
+  </p>
+  <div class="row">
+    <button data-tamper="share">Raise share to 90%</button>
+    <button data-tamper="duration">Extend duration</button>
+    <button data-tamper="storage">Grant persistent storage</button>
+    <button data-tamper="code">Swap the kernel</button>
+    <button data-tamper="expiry">Extend expiry</button>
+    <button data-tamper="servedcode">Serve different code</button>
+  </div>
+  <div id="tamperOut" class="note" style="margin-top:.6rem"></div>
+</div>
+
+<h2>3 · Live meter</h2>
+<div class="card">
+  <div class="row" style="margin-bottom:.9rem">
+    <button id="start" disabled>Start</button>
+    <button id="revoke" class="danger" disabled>Revoke now</button>
+    <button id="check" disabled>Verify a result</button>
+    <span id="state" class="pill mut">idle</span>
+    <span id="pathBadge" class="mut"></span>
+  </div>
+
+  <div style="margin-bottom:.35rem">
+    <span class="mut" style="font-size:12px">device share — red mark is the declared ceiling</span>
+  </div>
+  <div class="bar" style="margin-bottom:1rem"><i id="shareBar"></i><u id="ceilMark"></u></div>
+
+  <div class="grid">
+    <div class="stat"><b id="mShare">—</b><span>achieved share</span></div>
+    <div class="stat"><b id="mTarget">—</b><span>target (after backoff)</span></div>
+    <div class="stat"><b id="mElapsed">—</b><span>elapsed / cap</span></div>
+    <div class="stat"><b id="mShards">—</b><span>shards done</span></div>
+    <div class="stat"><b id="mGflops">—</b><span>throughput</span></div>
+    <div class="stat"><b id="mEnergy">—</b><span>energy est. / cap</span></div>
+    <div class="stat"><b id="mFrames">—</b><span>long frames</span></div>
+    <div class="stat"><b id="mBattery">—</b><span>battery</span></div>
+  </div>
+
+  <div id="signals" class="note" style="margin-top:.9rem"></div>
+  <div id="result" class="note" style="margin-top:.4rem"></div>
+</div>
+
+<h2>4 · The signed manifest</h2>
+<pre id="manifest" class="mut">issue a manifest to see it</pre>
+
+<p class="note">
+  <strong>Serve over HTTP</strong> — module workers and ES imports do not load
+  from <code>file://</code>. From the repo root:
+  <code>npx serve .</code> or <code>python -m http.server</code>, then open
+  <code>/demo/</code>.
+  <br><br>
+  <strong>Energy is an estimate.</strong> Browsers expose no power draw, so it
+  is <code>wattsAtFull × achievedShare × time</code>, calibrated from host-side
+  measurement. Battery delta is shown where available as a weak cross-check.
+</p>
+
+</div>
+
+<script type="module">
+import {
+  generateIssuerKey, buildManifest, signManifest, verifyManifest, digest,
+} from '../packages/zkpoc-ccm/index.js';
+import { Governor, State } from '../packages/zkpoc-worker/src/governor.js';
+import { MATMUL_WGSL } from '../packages/zkpoc-worker/src/kernels.js';
+
+const $ = (id) => document.getElementById(id);
+const pct = (v) => (v * 100).toFixed(1) + '%';
+
+const WORKER_URL = new URL('../packages/zkpoc-worker/src/worker.js', import.meta.url);
+
+let key = null, signed = null, verification = null, gov = null, workerSrc = null;
+
+// The manifest binds hashes of what actually runs, so the demo fetches the
+// real worker source and hashes it rather than hashing a copy. If the file on
+// disk changes, verification fails -- which is the property being demonstrated.
+async function loadCode() {
+  if (workerSrc === null) workerSrc = await (await fetch(WORKER_URL)).text();
+  return { worker: workerSrc, kernels: [MATMUL_WGSL] };
+}
+
+async function issue() {
+  const code = await loadCode();
+  key = await generateIssuerKey();
+  const share = +$('share').value;
+  const manifest = buildManifest({
+    origin: 'https://publisher.example',
+    keyId: key.keyId,
+    workload: { class: 'ml-inference', description: 'quantized GEMM inference shard' },
+    code: {
+      worker: await digest(code.worker),
+      kernels: [{ type: 'wgsl', hash: await digest(MATMUL_WGSL) }],
+    },
+    limits: {
+      cpu_share_max: share,
+      gpu_share_max: share,
+      duration_max_s: +$('dur').value,
+      energy_max_mwh: 40,
+      network: { egress_bytes_max: 1048576, allowed_origins: ['https://broker.example'] },
+    },
+    dataAccess: { storage: 'none', dom: 'none', sensors: 'none', cookies: 'none' },
+    ttlSeconds: 900,
+  });
+  signed = await signManifest(manifest, key.privateKey);
+
+  verification = await verifyManifest(signed, {
+    publicJwk: key.publicJwk,
+    loadedCode: code,
+    policy: { cpu_share_max: 0.5, gpu_share_max: 0.5, duration_max_s: 600,
+              require_data_access: { storage: 'none', dom: 'none' } },
+  });
+
+  renderChecks(verification);
+  $('manifest').textContent = JSON.stringify(signed, null, 2);
+  $('manifest').classList.remove('mut');
+  $('start').disabled = !verification.ok;
+  $('ceilMark').style.left = `calc(${Math.min(100, share * 100)}% - 1px)`;
+}
+
+function renderChecks(v) {
+  $('checks').innerHTML =
+    `<tr><th>check</th><th>result</th><th>detail</th></tr>` +
+    v.checks.map((c) => `<tr>
+      <td>${c.name}</td>
+      <td class="${c.ok ? 'ok' : 'bad'}">${c.ok ? 'pass' : 'FAIL'}</td>
+      <td class="mut">${esc(c.detail ?? '')}</td></tr>`).join('') +
+    `<tr><td><strong>verdict</strong></td>
+       <td class="${v.ok ? 'ok' : 'bad'}"><strong>${v.ok ? 'ACCEPT' : 'REJECT'}</strong></td>
+       <td class="mut">${v.ok ? 'governor may start' : 'governor will refuse'}</td></tr>`;
+}
+
+const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+
+// -- tamper tests -----------------------------------------------------------
+
+/**
+ * Two distinct attack shapes, and they are not equivalent.
+ *
+ * `manifest` tampers mutate the signed document, so the signature catches them
+ * all. That is table stakes -- it demonstrates ECDSA works, not that this
+ * format does anything useful.
+ *
+ * `code` tampers leave the manifest untouched and validly signed, and change
+ * what the page actually serves instead. This is the attack a signature cannot
+ * see, and the only one that isolates the code binding. It is the case the
+ * legitimacy-by-declaration argument actually rests on: a publisher who signs
+ * an honest manifest and ships a miner.
+ */
+const TAMPERS = {
+  share:      { manifest: (m) => { m.limits.gpu_share_max = 0.9; m.limits.cpu_share_max = 0.9; } },
+  duration:   { manifest: (m) => { m.limits.duration_max_s = 3000; } },
+  storage:    { manifest: (m) => { m.data_access.storage = 'persistent'; } },
+  code:       { manifest: (m) => { m.code.kernels[0].hash = 'sha256-' + 'A'.repeat(43) + '='; } },
+  expiry:     { manifest: (m) => { m.session.expires_at = '2099-01-01T00:00:00.000Z'; } },
+  servedcode: { code: (c) => ({ ...c, worker: c.worker + '\n// silently injected' }) },
+};
+
+for (const btn of document.querySelectorAll('[data-tamper]')) {
+  btn.addEventListener('click', async () => {
+    if (!signed) { $('tamperOut').innerHTML = '<span class="warn">issue a manifest first</span>'; return; }
+    const which = btn.dataset.tamper;
+    const spec = TAMPERS[which];
+
+    const t = structuredClone(signed);
+    if (spec.manifest) spec.manifest(t);
+    let code = await loadCode();
+    if (spec.code) code = spec.code(code);
+
+    const v = await verifyManifest(t, { publicJwk: key.publicJwk, loadedCode: code });
+    const failed = v.checks.filter((c) => !c.ok).map((c) => c.name);
+    const sigOk = v.checks.find((c) => c.name === 'signature')?.ok;
+
+    let msg;
+    if (v.ok) {
+      msg = `<span class="bad">tamper "${which}" was NOT detected — this is a bug</span>`;
+    } else {
+      msg = `<span class="ok">tamper "${which}" rejected</span>`
+          + `<span class="mut"> · failing checks: ${failed.join(', ')}</span>`;
+      if (sigOk) {
+        // The interesting case: nothing was forged, so the signature is happy.
+        // Only the hash of what actually loaded gives the attack away.
+        msg += `<br><span class="warn">note: the signature still verifies — `
+             + `this was caught by the code binding alone, which is the whole `
+             + `reason the manifest carries hashes.</span>`;
+      }
+    }
+    $('tamperOut').innerHTML = msg;
+    renderChecks(v);
+
+    // Prove the refusal is not merely cosmetic: a governor built on the
+    // rejected verification declines to start at all.
+    const probe = new Governor({ workerUrl: WORKER_URL, manifest: t, verification: v });
+    const started = await probe.start();
+    $('tamperOut').innerHTML += started
+      ? `<br><span class="bad">but the governor started anyway — bug</span>`
+      : `<br><span class="ok">governor refused to start (${probe.state})</span>`;
+  });
+}
+
+// -- meter ------------------------------------------------------------------
+
+function paint(t) {
+  $('state').textContent = t.state;
+  $('state').className = 'pill ' + (
+    t.state === State.RUNNING ? 'ok' :
+    t.state === State.PREEMPTED || t.state === State.BACKOFF ? 'warn' :
+    t.state === State.DENIED || t.state === State.REVOKED ? 'bad' : 'mut');
+
+  $('pathBadge').textContent = t.path ? `path: ${t.path}` : '';
+  $('mShare').textContent = pct(t.achievedShare);
+  $('mShare').className = t.achievedShare > t.declaredShare * 1.05 ? 'bad' : '';
+  $('mTarget').textContent = pct(t.targetShare);
+  $('mElapsed').textContent = `${t.elapsedS.toFixed(0)}/${t.durationMaxS}s`;
+  $('mShards').textContent = t.shards;
+  $('mGflops').textContent = t.gflops.toFixed(1) + ' GF';
+  $('mEnergy').textContent = t.energyMaxMwh
+    ? `${t.energyMwh.toFixed(1)}/${t.energyMaxMwh}` : t.energyMwh.toFixed(1);
+  $('mFrames').textContent = `${t.longFrames}/${t.totalFrames}`;
+  $('mBattery').textContent = t.battery
+    ? `${(t.battery.level * 100).toFixed(0)}%${t.battery.charging ? ' ⚡' : ''}` : 'n/a';
+
+  // Scale the bar so the ceiling sits at a readable position.
+  const scale = Math.max(t.declaredShare * 2, 0.1);
+  $('shareBar').style.width = Math.min(100, (t.achievedShare / scale) * 100) + '%';
+  $('ceilMark').style.left = `calc(${Math.min(100, (t.declaredShare / scale) * 100)}% - 1px)`;
+
+  const sig = [];
+  if (t.backoffFactor < 1) sig.push(`<span class="warn">backoff ×${t.backoffFactor.toFixed(2)}</span>`);
+  if (t.thermalThrottled) sig.push('<span class="warn">thermal decay detected</span>');
+  if (t.battery && !t.battery.charging) sig.push('<span class="warn">on battery</span>');
+  if (t.battery?.deltaSinceStart > 0) sig.push(`battery −${(t.battery.deltaSinceStart * 100).toFixed(1)}%`);
+  if (t.denialReason) sig.push(`<span class="bad">${esc(t.denialReason)}</span>`);
+  $('signals').innerHTML = sig.join(' · ');
+}
+
+$('issue').addEventListener('click', () => issue().catch(showErr));
+
+$('start').addEventListener('click', async () => {
+  gov = new Governor({
+    workerUrl: WORKER_URL, manifest: signed, verification,
+    path: $('path').value, matrixN: 256,
+    tuning: { wattsAtFull: 25 },
+  });
+  gov.addEventListener('tick', (e) => paint(e.detail));
+  gov.addEventListener('state', (e) => paint(e.detail));
+  gov.addEventListener('stopped', (e) => {
+    paint(e.detail);
+    $('start').disabled = false; $('revoke').disabled = true; $('check').disabled = true;
+  });
+  gov.addEventListener('fallback', (e) =>
+    $('signals').innerHTML += ` <span class="warn">fell back to CPU: ${esc(e.detail.reason)}</span>`);
+
+  const ok = await gov.start();
+  $('start').disabled = ok; $('revoke').disabled = !ok; $('check').disabled = !ok;
+  if (!ok) paint(gov.telemetry());
+});
+
+$('revoke').addEventListener('click', () => gov?.revoke());
+
+$('check').addEventListener('click', async () => {
+  const r = await gov.sampleResult();
+  $('result').innerHTML = r.correct
+    ? `<span class="ok">result verified</span> <span class="mut">C[0][0]=${r.value.toFixed(4)}, expected ${r.expected.toFixed(4)}, rel err ${r.relError.toExponential(1)} — over ${r.shards} shards</span>`
+    : `<span class="bad">result INCORRECT</span> <span class="mut">got ${r.value}, expected ${r.expected}</span>`;
+});
+
+function showErr(e) {
+  $('tamperOut').innerHTML = `<span class="bad">${esc(e)}</span>`;
+  console.error(e);
+}
+</script>
+</body>
+</html>
