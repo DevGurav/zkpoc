@@ -1,0 +1,308 @@
+# ZK-PoC
+
+**Consent-governed, verifiable browser compute — and an honest measurement of
+whether it can pay for anything.**
+
+The web has two funding rails: surveillance advertising and hard paywalls.
+The industry's flagship attempt at a third — Google's Privacy Sandbox — was
+retired in October 2025 and fully removed from Chrome in M150 (July 2026),
+with Protected Audience never exceeding 1% adoption. The problem is not merely
+unsolved; the best-funded attempt was withdrawn.
+
+ZK-PoC asks whether metered, consented, cryptographically verified spare
+compute can be that third rail, and measures the answer rather than asserting
+it.
+
+---
+
+## Two results, both reproducible in under a minute
+
+### 1. The canonical cryptojacking baseline is overstated by ~87×
+
+Saad & Mohaisen (*IEEE TDSC* 2024, arXiv:2304.13253) is the reference economic
+analysis of in-browser compute monetisation. It reports a yield of
+`$1.06 × 10⁻⁵ USD/second`. Recomputed from the paper's own Eq. (5) and its own
+parameters, the correct figure is **`$1.22 × 10⁻⁷ USD/second`** — the reported
+value is their P divided by 60 rather than by the 5100-second session.
+
+Every other intermediate in the paper reproduces exactly (3.19e-6 XMR,
+$6.38e-4, L/P ≈ 7×, 3.45e10 hashes per XMR, ~52 years to mine 1 XMR). **This
+strengthens their negative conclusion rather than undermining it** — the true
+yield is $0.00044/device-hour, so the profit-and-loss gap they identify is
+~87× wider than stated. ([ADR-0008](docs/adr/0008-tdsc-baseline-correction.md))
+
+```sh
+python bench/tdsc_reproduction.py
+```
+
+The script also reports a reconciliation of Table 9. Two of the nine rows do
+not close against a fixed per-device session length; for Windows α=0.5 the
+reported P and T *both* invert to h ≈ 10.5 against a printed h = 14, so the row
+is internally consistent and the printed hash rate is the outlier. Reported as
+a reconciliation, not an error claim — the table does not print a per-row Δt.
+
+### 2. The ≤5% ambient resource ceiling cannot work, but only just
+
+```sh
+python bench/breakeven.py
+```
+
+Solving `V_compute·η_verify − E_cost > R_ads` for the resource share σ gives
+the break-even surface σ\*(device, market) — the share of a device needed for
+compute barter to match advertising. Nobody has published this.
+
+Under the *most favourable* assumptions available — best device class,
+cheapest ad inventory, theoretical cloud-spot parity, zero redundancy and zero
+verification overhead — the answer is **σ\* = 6.7%**, against a design ceiling
+of 5%.
+
+The ceiling misses by 1.3×, not by an order of magnitude. The constructive
+reading is that the architecture is close to right and the ceiling is simply
+set too low: at roughly 7–25% share on a discrete GPU, long-tail inventory is
+reachable. That is a design recommendation, not a refutation.
+
+Two corollaries fall out of the same model:
+
+- **WASM-on-CPU is economically dead** at any share — electricity costs more
+  than the compute is worth. WebGPU is not an optional path, it is the project.
+  ([ADR-0003](docs/adr/0003-webgpu-mandatory.md))
+- **ZK auditing is only viable when paired with a large stake.** Proving costs
+  10³–10⁶× the work it proves, so any audit rate high enough to deter
+  free-riding on its own destroys the economics. The inspection game gives
+  `a* = 1/(1+k)` for a stake worth `k` shards: a stake of ~10³–10⁴ shards drops
+  the required audit rate far enough that proofs become a rounding error.
+  Deterrence comes from the stake so the proof can stay rare.
+  ([ADR-0006](docs/adr/0006-audit-rate-from-inspection-game.md))
+
+### 3. The first fully-measured device: 107.2 GFLOPS, 9.1 W, uneconomic — and a lesson in measurement discipline
+
+An Intel Gen-12LP (Iris Xe) was placeholder-estimated at 850 GFLOPS. Getting a
+trustworthy number took two passes, and the second one overturned a conclusion
+the first pass looked confident about.
+
+```sh
+python bench/dispatch_analysis.py
+```
+
+A first, 7-rep sweep across N=256/512/1024 gave a "sustained" rate of 75.4
+GFLOPS, with every run decaying monotonically within itself — which looked
+exactly like thermal throttling on an integrated GPU sharing power with the
+CPU. It wasn't. A genuine 120-second sustained run at N=1024 shows throughput
+climbing for the first ~16 seconds and then holding flat (OLS trend
+**+2.4%/min**, within sampling noise) at **107.2 GFLOPS**. Seven dispatches is
+~200 ms of GPU work — the earlier run never got past the warmup ramp, and a
+too-short measurement produced a wrong story that fit a plausible hardware
+narrative. The probe's plateau detector was rewritten from a spread threshold
+(which flagged this exact run as "not plateaued") to a trend fit that can
+actually tell *noisy-but-flat* from *genuinely declining*.
+
+The dispatch-overhead result survives untouched: fitting
+`t(N) = overhead + 2N³/throughput` separates a **fixed 4.0 ms per-dispatch
+cost** from throughput. At N=256, 91.6% of measured time is the
+`onSubmittedWorkDone()` fence — a small shard measures the fence, not the
+device — which puts a floor of **N ≥ 1187** on shard sizing to keep overhead
+under 10%. That's a first-class M2 problem, not a tuning detail: the cuPOW
+paper names difficulty calibration as PoUW's unsolved problem, and this is the
+concrete answer for this device.
+
+Marginal watts were measured too, via WMI energy-counter differencing
+(`bench/power/`) — **9.1 W**, after a dedicated settle phase, since the first
+attempt showed the idle baseline itself drifting 17→34 W as the machine wound
+down from being touched. With the corrected F(d), break-even wattage `W*`
+rises from 3.9 W to **5.6 W**. Measured draw exceeds it either way: **the tier
+is uneconomic at every share** — the Pass-1 conclusion survives, but now on
+numbers that are right rather than numbers that happened to agree by accident.
+Full account in [docs/device-tiers.md](docs/device-tiers.md), decision record
+in [ADR-0009](docs/adr/0009-energy-counter-not-instant-rate.md) and
+[ADR-0010](docs/adr/0010-sustained-trend-fit-not-quick-sweep.md).
+
+> The remaining five tiers are still literature-anchored **placeholders**. The
+> lesson above argues for caution in both directions — the original placeholder
+> was wrong by 11×, and the first attempt to correct it was *also* wrong, just
+> less wrong. The solver flags every unmeasured value on every run — `*` for
+> FLOPS, `w` for watts — and σ\* stays provisional until more devices are
+> measured with a sustained run, not a quick one.
+
+---
+
+## Measuring your own device
+
+Open [`bench/device/probe.html`](bench/device/probe.html) — no build step, no
+dependencies. It measures achievable GFLOPS on the WebGPU and CPU paths at a
+controlled duty cycle (100% / 25% / 5%), verifies the GPU result against a CPU
+recomputation so a timing number alone is never trusted, and exports JSON.
+
+Two modes, and the distinction matters:
+
+- **quick (reps)** — sweep N=256/512/1024 and feed all three to
+  `bench/dispatch_analysis.py`, which separates fixed dispatch overhead from
+  marginal throughput. Not valid as F(d) on its own.
+- **sustained (60–300 s)** — the only mode whose number belongs in the economic
+  model. It buckets throughput over time and reports whether the curve actually
+  **plateaued**; if it did not, the steady value is still an upper bound and it
+  says so rather than quietly reporting the last sample as converged.
+
+Save the output to `bench/device/measurements/<tier-name>.json` and
+`bench/breakeven.py` picks it up automatically.
+
+For `watts_full`, which no browser can provide, see
+[bench/power/](bench/power/README.md) — on Windows the ACPI battery reports
+discharge in mW through WMI, so an idle/load/idle sequence gives marginal draw
+with nothing to install:
+
+```sh
+powershell -File bench/power/measure-windows.ps1 -LoadSeconds 120
+python bench/power/analyse_power.py --tier laptop-igpu
+```
+
+Quantifying energy and thermal effects is the gap FibRace (arXiv:2510.14693
+§5.1.3) explicitly left open, so it is instrumented deliberately rather than
+assumed.
+
+---
+
+## Where this is going
+
+The barter economics above are a *measurement*, not the product. The deployable
+application of the same machinery is **anti-bot proof-of-work**.
+
+Cloudflare Turnstile, Friendly Captcha, ALTCHA, mCaptcha and Anubis already burn
+client CPU at ~100% for 1–3 seconds on a large fraction of web requests,
+producing output nobody wants — and that baseline is already broken: a free-tier
+Google Compute Engine instance can mine enough tokens to bypass every Anubis
+deployment on the internet in about six minutes. Substituting useful, verified
+work keeps the deterrence property while recovering the waste, and gets two
+things hash puzzles cannot: inputs drawn from a live buyer queue (unpredictable,
+so un-precomputable) and a proof the work was actually done.
+
+The obvious objection is the 2025 SoK *Is Proof-of-Useful-Work Really Useful?*
+(IACR ePrint 2025/1814), which shows utility undermines the security budget in
+PoUW consensus. It does not transfer here: the shard output goes to the workload
+buyer and the revenue to the site operator, so the client — honest user or bot —
+receives nothing and the per-request cost asymmetry is preserved. That is the
+SoK's own recommended remedy, *partial incentive allocation*. The boundary is
+stated honestly: in **barter** mode the client *is* paid, so the criticism
+applies in full and no anti-abuse claim is made for that mode.
+
+| Milestone | Status |
+| --- | --- |
+| **M0** Economic model + device benchmark | done |
+| **M1** Worker + resource governor + Compute Consent Manifest | done; 34 tests passing |
+| **M2** Broker, tiered verification, useful-PoW challenge protocol | not started |
+| **M3** ZK layer — in-browser Groth16, settlement-side zkVM | not started (plan recorded, [ADR-0007](docs/adr/0007-tiered-zk-proving-plan.md)) |
+| **M4** Demo, SDK, W3C/WICG explainer | not started |
+
+This table is a summary. [docs/roadmap.md](docs/roadmap.md) is the source of
+truth — exit criteria, what shipped, and what's still open per milestone.
+
+---
+
+## Consent and enforcement (M1)
+
+Because covert compute cannot be reliably detected — WASM diversification
+evades MINOS in **100%** of cases (arXiv:2403.15197) — legitimacy here comes
+from *declaration*, not detection ([ADR-0002](docs/adr/0002-legitimacy-by-declaration-not-detection.md)).
+The [Compute Consent Manifest](packages/zkpoc-ccm/SPEC.md) is a signed statement of
+which code will run, how much of the device it may take, for how long, and what
+it may touch, verifiable by someone who trusts neither publisher nor broker.
+Signing uses RFC 8785 canonical JSON, not `JSON.stringify`
+([ADR-0004](docs/adr/0004-canonical-json-signing.md)), so a third party can
+recompute the signed bytes from the parsed object alone.
+
+Three properties make the declaration mean something:
+
+- **Code binding** — SHA-256 digests of the worker and every kernel. Without
+  this you declare one thing and ship another. A verifier given no loaded code
+  gets a *failed* check, not a skipped one.
+- **Enforceable limits** — every `limits` field maps to something the governor
+  caps at runtime by withholding scheduling time. The schema admits no field
+  nothing enforces.
+- **Containment scope** — `data_access` is enforced structurally where possible:
+  execution is in a dedicated Worker, which has no DOM, so `dom: "none"` is a
+  property of the context rather than a promise.
+
+The [governor](packages/zkpoc-worker/src/governor.js) holds the schedule and
+therefore the power — the worker never decides how much of the device to use.
+Share control is **integral, not per-burst**: sleeping `busy × (1/target − 1)`
+after each burst pins the *instantaneous* share but lets a burst that overran
+its budget permanently inflate the session average. The target wall-clock is
+recomputed from cumulative busy time instead, so overshoot is repaid and the
+session average converges on the ceiling from below
+([ADR-0005](docs/adr/0005-integral-share-control.md)). Four signals throttle
+independently and compose multiplicatively: user interaction, dropped frames,
+sustained throughput decay (a thermal proxy — no browser exposes temperature),
+and battery discharge. Full API in
+[packages/zkpoc-worker/API.md](packages/zkpoc-worker/API.md).
+
+```sh
+npm test --prefix packages/zkpoc-ccm      # 28 tests
+npm test --prefix packages/zkpoc-worker   #  6 tests
+```
+
+### Running the demo
+
+Module workers and ES imports do not load from `file://`, so serve the repo:
+
+```sh
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/demo/`. Issue a manifest, watch the
+verification checks, start the governor, and use the tamper buttons — each one
+alters the manifest after signing, and both the verifier and the governor must
+reject it.
+
+---
+
+## Documentation
+
+Written as it would be kept alongside real engineering work, not
+back-filled at the end — several of the ADRs below record a wrong first
+answer and the measurement that caught it, which is the part worth keeping.
+
+| Doc | What's in it |
+| --- | --- |
+| **[docs/BUILD.md](docs/BUILD.md)** | **The working spec — open this before writing code.** Carried constants, invariants that must not break, per-milestone design contracts and exit criteria |
+| [docs/roadmap.md](docs/roadmap.md) | Milestone status — the source of truth the table above summarises |
+| [docs/testing-strategy.md](docs/testing-strategy.md) | Coverage map, the one test that actually matters and why, what's verified manually vs. automated |
+| [docs/adr/](docs/adr/README.md) | 8 Architecture Decision Records — the *why* behind every non-obvious design choice |
+| [docs/device-tiers.md](docs/device-tiers.md) | Full account of the placeholder→measured device-tier correction |
+| [CHANGELOG.md](CHANGELOG.md) | What shipped, what broke, what got corrected — by milestone |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add a device measurement |
+| [SECURITY.md](SECURITY.md) | Threat model, the dual-use question stated head-on, what is and isn't enforced today |
+| [packages/zkpoc-ccm/SPEC.md](packages/zkpoc-ccm/SPEC.md) | Compute Consent Manifest format — the input to a planned W3C/WICG explainer |
+| [packages/zkpoc-worker/API.md](packages/zkpoc-worker/API.md) | `Governor` API, worker message protocol, kernel exports |
+
+## Layout
+
+```text
+bench/tdsc_reproduction.py     reproduce + correct the TDSC baseline
+bench/breakeven.py             break-even model, sigma*(device, market)
+bench/dispatch_analysis.py     separate dispatch overhead from throughput
+bench/device/probe.html        in-browser F(d) probe, no build step
+bench/device/sweeps/           raw multi-size sweeps
+bench/device/measurements/     per-tier F(d), consumed by breakeven.py
+bench/power/                   marginal watts via WMI battery discharge
+packages/zkpoc-ccm/            Compute Consent Manifest — sign, verify, SPEC.md
+packages/zkpoc-worker/         resource governor + sandboxed shard worker, API.md
+demo/                          live meter, revocation, tamper tests
+docs/adr/                      Architecture Decision Records
+docs/BUILD.md                  working spec — measured constants, invariants, phase status
+docs/roadmap.md                milestone status, source of truth
+docs/testing-strategy.md       coverage map and testing conventions
+docs/device-tiers.md           tier provenance + what measurement changed
+CHANGELOG.md, CONTRIBUTING.md, SECURITY.md
+```
+
+## Notes on rigour
+
+Claims here are deliberately narrow. Client-side proving on consumer devices
+was already measured at scale by FibRace (2.2M proofs, 1,420 device models);
+selective ZK audit in federated learning was already done by zkVFL. What
+remains open — and what this project claims — is in-browser proving of a *real*
+workload under a *resource governor* with *energy and thermal instrumentation*,
+and an audit rate derived from economics rather than anomaly detection.
+
+## License
+
+MIT OR Apache-2.0.
